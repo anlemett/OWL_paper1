@@ -1,0 +1,135 @@
+Saccade
+                   sum_sq          df             F         PR(>F)
+Intercept    4.250676e+14         1.0  1.494576e+06   0.000000e+00
+C(atco_id)   1.316937e+15        17.0  2.723805e+05   0.000000e+00
+C(scenario)  2.861958e+11         2.0  5.031451e+02  3.089933e-219
+Residual     1.010206e+16  35519747.0           NaN            NaN
+
+
+
+PupilDiameter
+                sum_sq          df             F  PR(>F)
+Intercept    16.042219         1.0  3.011638e+07     0.0
+C(atco_id)   11.862895        17.0  1.310027e+06     0.0
+C(scenario)   0.773766         2.0  7.263032e+05     0.0
+Residual     18.920453  35519747.0           NaN     NaN
+
+
+
+LeftPupilDiameter
+                sum_sq          df             F  PR(>F)
+Intercept    19.471737         1.0  3.713929e+07     0.0
+C(atco_id)   10.814705        17.0  1.213374e+06     0.0
+C(scenario)   0.620969         2.0  5.922008e+05     0.0
+Residual     18.622626  35519747.0           NaN     NaN
+
+
+
+RightPupilDiameter
+                sum_sq          df             F  PR(>F)
+Intercept    13.634775         1.0  2.047625e+07     0.0
+C(atco_id)   15.112908        17.0  1.335062e+06     0.0
+C(scenario)   0.828204         2.0  6.218844e+05     0.0
+Residual     23.651975  35519747.0           NaN     NaN
+
+
+
+LeftBlinkClosingAmplitude
+               sum_sq          df            F        PR(>F)
+Intercept    0.000117         1.0  1978.242124  0.000000e+00
+C(atco_id)   0.000832        17.0   825.363768  0.000000e+00
+C(scenario)  0.000023         2.0   193.153334  1.303254e-84
+Residual     2.106014  35519747.0          NaN           NaN
+
+
+
+LeftBlinkOpeningAmplitude
+               sum_sq          df            F        PR(>F)
+Intercept    0.000102         1.0  1963.766935  0.000000e+00
+C(atco_id)   0.000732        17.0   833.166923  0.000000e+00
+C(scenario)  0.000018         2.0   177.196525  1.108947e-77
+Residual     1.836498  35519747.0          NaN           NaN
+
+
+
+LeftBlinkClosingSpeed
+                   sum_sq          df            F         PR(>F)
+Intercept        0.617875         1.0  2099.070060   0.000000e+00
+C(atco_id)       3.483290        17.0   696.092545   0.000000e+00
+C(scenario)      0.135808         2.0   230.685442  6.534856e-101
+Residual     10455.471381  35519747.0          NaN            NaN
+
+
+
+LeftBlinkOpeningSpeed
+                  sum_sq          df            F         PR(>F)
+Intercept       0.066216         1.0  2108.635798   0.000000e+00
+C(atco_id)      0.370026        17.0   693.136233   0.000000e+00
+C(scenario)     0.014543         2.0   231.553474  2.743212e-101
+Residual     1115.408727  35519747.0          NaN            NaN
+
+
+
+RightBlinkClosingAmplitude
+               sum_sq          df            F        PR(>F)
+Intercept    0.000113         1.0  2085.157803  0.000000e+00
+C(atco_id)   0.000696        17.0   752.906148  0.000000e+00
+C(scenario)  0.000022         2.0   203.959744  2.641905e-89
+Residual     1.931352  35519747.0          NaN           NaN
+
+
+
+RightBlinkOpeningAmplitude
+               sum_sq          df            F        PR(>F)
+Intercept    0.000099         1.0  2083.329087  0.000000e+00
+C(atco_id)   0.000619        17.0   762.630810  0.000000e+00
+C(scenario)  0.000018         2.0   193.190707  1.255447e-84
+Residual     1.694747  35519747.0          NaN           NaN
+
+
+
+RightBlinkClosingSpeed
+                   sum_sq          df            F         PR(>F)
+Intercept        0.573098         1.0  1993.775552   0.000000e+00
+C(atco_id)       3.328900        17.0   681.238352   0.000000e+00
+C(scenario)      0.151128         2.0   262.882045  6.801793e-115
+Residual     10209.925906  35519747.0          NaN            NaN
+
+
+
+RightBlinkOpeningSpeed
+                  sum_sq          df            F         PR(>F)
+Intercept       0.061022         1.0  1990.281149   0.000000e+00
+C(atco_id)      0.354562        17.0   680.253753   0.000000e+00
+C(scenario)     0.016191         2.0   264.033708  2.150157e-115
+Residual     1089.035600  35519747.0          NaN            NaN
+
+
+
+HeadHeading
+                   sum_sq          df              F  PR(>F)
+Intercept    2.051050e+06         1.0  269201.195412     0.0
+C(atco_id)   4.357524e+07        17.0  336427.556423     0.0
+C(scenario)  7.064301e+05         2.0   46359.616246     0.0
+Residual     2.706258e+08  35519747.0            NaN     NaN
+
+
+
+HeadPitch
+                    sum_sq          df              F  PR(>F)
+Intercept       556.727853         1.0   72991.885864     0.0
+C(atco_id)   123016.536525        17.0  948737.810375     0.0
+C(scenario)     353.819548         2.0   23194.417073     0.0
+Residual     270918.229550  35519747.0            NaN     NaN
+
+
+
+HeadRoll
+                    sum_sq          df              F  PR(>F)
+Intercept      4154.939386         1.0  684864.299061     0.0
+C(atco_id)    81135.494428        17.0  786686.687320     0.0
+C(scenario)     874.605523         2.0   72081.207760     0.0
+Residual     215491.442577  35519747.0            NaN     NaN
+
+
+
