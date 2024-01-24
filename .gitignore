@@ -6,5 +6,6 @@ Plots/.ipynb_checkpoints/*
 *.png
 *.zip
 *.z7
+*.h5
 
 
