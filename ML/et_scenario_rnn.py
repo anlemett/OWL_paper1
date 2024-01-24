@@ -18,6 +18,7 @@ DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
 DATA_DIR = os.path.join(DATA_DIR, "EyeTracking")
 
+#TIME_INTERVAL_DURATION = 60 #sec
 TIME_INTERVAL_DURATION = 60 #sec
 WINDOW_SIZE = 249 * TIME_INTERVAL_DURATION
 
@@ -30,10 +31,12 @@ features = ['Saccade', 'Fixation',
             'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
             'HeadHeading', 'HeadPitch',	'HeadRoll']
 # for testing:
-features = ['Saccade', 'Fixation', 'LeftPupilDiameter',
+features = ['Saccade', 'Fixation',
             'LeftBlinkClosingAmplitude', 'LeftBlinkClosingSpeed']
+features = ['LeftBlinkClosingAmplitude', 'LeftBlinkClosingSpeed']
 
 columns = ['UnixTimestamp'] + ['ValuesPerSecond'] + features
+
 
 def getTimeInterval(timestamp, first_timestamp):
 
@@ -56,8 +59,7 @@ def createTimeSeriesDf(df, score):
     df = df[new_columns]
 
     last_time_interval = list(df['timeInterval'])[-1]
-
-
+    
     #####################################
     intervals = []
 
@@ -79,14 +81,17 @@ def createTimeSeriesDf(df, score):
             
         timeseries_df.loc[ti-1] = row_lst
         intervals.append(ti)
-
-    number_of_rows = len(timeseries_df.index)
-    scores = [score] * number_of_rows
     
     timeseries_df['timeInterval'] = timeseries_df.index
     timeseries_df = timeseries_df.reset_index(drop=True)
     
-    return (timeseries_df, scores, last_time_interval)
+    number_of_rows = len(timeseries_df.index)
+    scores = [score] * number_of_rows
+    
+    # number_of_rows <= last_time_interval, because some time intervals might
+    # miss data (or have insufficient amount)
+    
+    return (timeseries_df, scores, number_of_rows)
 
 
 ###############################################################################
@@ -96,7 +101,7 @@ df_low = pd.read_csv(full_filename, sep=' ', low_memory=False)
 
 full_filename = os.path.join(DATA_DIR, "ET_D3r2_KB.csv")
 df_high = pd.read_csv(full_filename, sep=' ', low_memory=False)
-(temp_df, temp_scores, temp_number) = createTimeSeriesDf(df_low, 3)
+(temp_df, temp_scores, temp_number) = createTimeSeriesDf(df_high, 3)
 TS_df = pd.concat([TS_df, temp_df]).reset_index(drop=True)
 all_scores = all_scores + temp_scores
 number_of_time_intervals = number_of_time_intervals + temp_number
@@ -104,7 +109,7 @@ number_of_time_intervals = number_of_time_intervals + temp_number
 full_filename = os.path.join(DATA_DIR, "ET_D3r3_KB.csv")
 df_medium = pd.read_csv(full_filename, sep=' ', low_memory=False) 
  
-(temp_df, temp_scores, temp_number) = createTimeSeriesDf(df_low, 2)
+(temp_df, temp_scores, temp_number) = createTimeSeriesDf(df_medium, 2)
 TS_df = pd.concat([TS_df, temp_df]).reset_index(drop=True)
 all_scores = all_scores + temp_scores
 number_of_time_intervals = number_of_time_intervals + temp_number
@@ -132,7 +137,7 @@ timeseries_np = np.empty(0)
 
 number_of_rows = len(TS_df.index)
 print(number_of_rows)
-print(number_of_time_intervals) #TODO: number_of_rows == number_of_time_intervals ???
+print(number_of_time_intervals)
 
 for index in range(0, number_of_rows):
     for feature in features:
@@ -141,17 +146,17 @@ for index in range(0, number_of_rows):
         timeseries_np = np.append(timeseries_np, new_np)
         
 timeseries_np = timeseries_np.reshape([number_of_rows, len(features), WINDOW_SIZE])
-#print(timeseries_np)
+print(timeseries_np.shape)
+print(len(all_scores))
 
 
 ###############################################################################
 # Spit the data into train and test
-print(timeseries_np.shape)
 train_X, test_X, train_Y, test_Y = model_selection.train_test_split(
     timeseries_np, all_scores, test_size=0.15, random_state=42, shuffle=True
 )
 
-np.split(timeseries_np, [])
+#np.split(timeseries_np, [])
 
 print(
     f"Length of train_X : {len(train_X)}\nLength of test_X : {len(test_X)}\nLength of train_Y : {len(train_Y)}\nLength of test_Y : {len(test_Y)}"
@@ -161,6 +166,7 @@ print(
 ###############################################################################
 # Reshape the data
 x_train = np.asarray(train_X).astype(np.float32).reshape(-1, len(features)*WINDOW_SIZE, 1)
+
 y_train = np.asarray(train_Y).astype(np.float32).reshape(-1, 1)
 y_train = keras.utils.to_categorical(y_train)
 
@@ -168,6 +174,8 @@ x_test = np.asarray(test_X).astype(np.float32).reshape(-1, len(features)*WINDOW_
 y_test = np.asarray(test_Y).astype(np.float32).reshape(-1, 1)
 y_test = keras.utils.to_categorical(y_test)
 
+print(x_train.shape)
+print(y_train.shape)
 
 ###############################################################################
 #BATCH_SIZE = 64
@@ -205,7 +213,7 @@ print(conv_model.summary())
 
 ###############################################################################
 #epochs = 5
-epochs = 1
+epochs = 20
 
 callbacks = [
     keras.callbacks.ModelCheckpoint(
@@ -234,6 +242,9 @@ conv_model.compile(
         keras.metrics.Recall(),
     ],
 )
+
+print(train_dataset)
+
 
 conv_model_history = conv_model.fit(
     train_dataset,
