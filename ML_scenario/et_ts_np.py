@@ -27,9 +27,9 @@ FILENAMES_MEDIUM = ["D1r2_MO", "D1r5_EI",            "D2r5_UO", "D3r3_KB", "D3r6
                     "D7r1_LS", "D7r6_ML", "D8r3_AP", "D8r4_AK", "D9r3_RE", "D9r5_SV"
                    ]
 '''
-FILENAMES_LOW =    ["D1r1_MO", "D2r4_UO"]
-FILENAMES_HIGH =   ["D1r3_MO", "D2r6_UO"]
-FILENAMES_MEDIUM = ["D1r2_MO", "D2r5_UO"]
+FILENAMES_LOW =    ["D1r1_MO", "D1r6_EI", "D2r3_KV", "D2r4_UO", "D3r1_KB", "D3r5_PF"]
+FILENAMES_HIGH =   ["D1r3_MO", "D1r4_EI", "D2r1_KV", "D2r6_UO", "D3r2_KB", "D3r4_PF"]
+#FILENAMES_MEDIUM = ["D1r2_MO", "D2r5_UO"]
 
 
 def create_TS_np(df, features):
@@ -66,7 +66,8 @@ def create_TS_np(df, features):
 
 def get_TS_np(features):
     
-    number_of_runs = len(FILENAMES_LOW) + len(FILENAMES_HIGH) + len(FILENAMES_MEDIUM)
+    #number_of_runs = len(FILENAMES_LOW) + len(FILENAMES_HIGH) + len(FILENAMES_MEDIUM)
+    number_of_runs = len(FILENAMES_LOW) + len(FILENAMES_HIGH)
     window_size = 500000
     number_of_features = len(features)
     
@@ -93,7 +94,7 @@ def get_TS_np(features):
         row_idx = row_idx + 1
         
         all_scores.append(3)
-    
+    '''
     for filename in FILENAMES_MEDIUM:
         full_filename = os.path.join(DATA_DIR, "ET_" + filename + ".csv")
         df_medium = pd.read_csv(full_filename, sep=' ', low_memory=False) 
@@ -103,6 +104,6 @@ def get_TS_np(features):
         row_idx = row_idx + 1
 
         all_scores.append(2)
-    
+    '''
     return (TS_np, all_scores)
 

@@ -1,10 +1,10 @@
 import warnings
 warnings.filterwarnings('ignore')
 
-#import sys #exit
+import sys #exit
 
 import numpy as np
-import itertools
+from statistics import mean
 
 import tensorflow as tf
 from tensorflow import keras
@@ -15,7 +15,7 @@ from et_rnn_model import create_model
 from et_ts_np import get_TS_np
 
 TIME_INTERVAL_DURATION = 180  #sec
-WINDOW_SIZE = 249 * TIME_INTERVAL_DURATION
+WINDOW_SIZE = 250 * TIME_INTERVAL_DURATION
 
 all_features = ['Saccade', 'Fixation',
             'LeftPupilDiameter', 'RightPupilDiameter',
@@ -25,7 +25,10 @@ all_features = ['Saccade', 'Fixation',
             'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
             'HeadHeading', 'HeadPitch',	'HeadRoll']
 # for testing:
-all_features = ['LeftBlinkOpeningAmplitude', 'LeftBlinkClosingSpeed', 'RightBlinkClosingAmplitude']
+#all_features = ['LeftBlinkOpeningAmplitude', 'LeftBlinkClosingSpeed', 'RightBlinkClosingAmplitude']
+
+#to make the result reproducable
+keras.utils.set_random_seed(1)
 
 ###############################################################################
 # Test defferent features
@@ -39,8 +42,8 @@ def test_different_features(features):
     #Shuffle data
 
     scores_np = np.array(scores)
-    print(TS_np.shape)
-    print(scores_np.shape)
+    #print(TS_np.shape)
+    #print(scores_np.shape)
 
     zipped = list(zip(TS_np, scores_np))
 
@@ -54,7 +57,9 @@ def test_different_features(features):
     
     max_score = max(scores)
     print(f"Max score : {max_score}")
-    print(set(scores))
+    #print(set(scores))
+    
+    print(len(set(scores)))
     #sys.exit(0)
 
 
@@ -81,125 +86,152 @@ def test_different_features(features):
     print(weight_dict)
 
 ###############################################################################
+
+    # Define the K-fold Cross Validator
+    num_folds = 10
+    kfold = model_selection.KFold(n_splits=num_folds, shuffle=True)
+    
+    # K-fold Cross Validation model evaluation
+    
+    # Define per-fold score containers
+    acc_per_fold = []
+    f1_per_fold = []
+    
+    fold_no = 1
+    for train_idx, test_idx in kfold.split(scores):
+    
     # Spit the data into train and test
-    train_X, test_X, train_Y, test_Y = model_selection.train_test_split(
-        TS_np, scores, test_size=0.15, random_state=42, shuffle=True
-        )
+    #train_X, test_X, train_Y, test_Y = model_selection.train_test_split(
+    #    TS_np, scores, test_size=0.15, random_state=1, shuffle=True
+    #    )
 
-    print(
-        f"Length of train_X : {len(train_X)}\nLength of test_X : {len(test_X)}\nLength of train_Y : {len(train_Y)}\nLength of test_Y : {len(test_Y)}"
-        )
+    #print(
+    #    f"Length of train_X : {len(train_X)}\nLength of test_X : {len(test_X)}\nLength of train_Y : {len(train_Y)}\nLength of test_Y : {len(test_Y)}"
+    #    )
 
-
+        train_X = np.array(TS_np)[train_idx.astype(int)]
+        train_Y = scores[train_idx.astype(int)]
+        test_X = np.array(TS_np)[test_idx.astype(int)]
+        test_Y = scores[test_idx.astype(int)]
 ###############################################################################
 # Reshape the data
-    x_train = np.asarray(train_X).astype(np.float32).reshape(-1, len(features)*WINDOW_SIZE, 1)
+    #x_train = np.asarray(train_X).astype(np.float32).reshape(-1, len(features)*WINDOW_SIZE, 1)
+        x_train = np.asarray(train_X).astype(np.float32).reshape(-1, WINDOW_SIZE, len(features))
 
-    y_train = np.asarray(train_Y).astype(np.float32).reshape(-1, 1)
-    y_train = keras.utils.to_categorical(y_train) # transform to one-hot label
+        y_train = np.asarray(train_Y).astype(np.float32).reshape(-1, 1)
+        y_train = keras.utils.to_categorical(y_train,num_classes=max_score) # transform to one-hot label
 
-    x_test = np.asarray(test_X).astype(np.float32).reshape(-1, len(features)*WINDOW_SIZE, 1)
-    y_test = np.asarray(test_Y).astype(np.float32).reshape(-1, 1)
-    y_test = keras.utils.to_categorical(y_test) # transform to one-hot label
+    #x_test = np.asarray(test_X).astype(np.float32).reshape(-1, len(features)*WINDOW_SIZE, 1)
+        x_test = np.asarray(test_X).astype(np.float32).reshape(-1, WINDOW_SIZE, len(features))
+        y_test = np.asarray(test_Y).astype(np.float32).reshape(-1, 1)
+        y_test = keras.utils.to_categorical(y_test,num_classes=max_score) # transform to one-hot label
 
-    print(x_train.shape)
-    print(y_train.shape)
-
-###############################################################################
-    #BATCH_SIZE = 2
-    BATCH_SIZE = 1
-
-    #to make the result reproducable
-    keras.utils.set_random_seed(1)
-
-
-    train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-    test_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test))
-
-    #train_dataset = train_dataset.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
-    train_dataset = train_dataset.batch(BATCH_SIZE)
-    test_dataset = test_dataset.batch(BATCH_SIZE)
-
+        print(x_train.shape)
+        print(y_train.shape)
 
 ###############################################################################
-    callbacks = [
-        keras.callbacks.ModelCheckpoint(
-            "best_model.h5", save_best_only=True, monitor="loss"
-            ),
-        #keras.callbacks.ReduceLROnPlateau(
-        #    monitor="val_top_k_categorical_accuracy",
-        #    factor=0.2,
-        #    patience=2,
-        #    min_lr=0.000001,
-        #    ),
-        #keras.callbacks.EarlyStopping(monitor='loss',
-        #                              patience=2,
-        #                              mode='min')
-        ]
+    #BATCH_SIZE = 1
+        BATCH_SIZE = 1
 
-###############################################################################
-    #precisions = []
-    #recalls = []
-    conv_model = create_model(len(features), WINDOW_SIZE, len(set(scores)))
+        train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
+        print(fold_no)
+        print("x_train, y_train")
+        print(x_train.shape)
+        print(y_train.shape)
+        test_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test))
+        print("x_test, y_test")
+        print(x_test.shape)
+        print(y_test.shape)
+        print(y_test)
 
-    #print(conv_model.summary())
+        #train_dataset = train_dataset.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
+        train_dataset = train_dataset.batch(BATCH_SIZE)
+        test_dataset = test_dataset.batch(BATCH_SIZE)
 
 
 ###############################################################################
+        callbacks = [
+            keras.callbacks.ModelCheckpoint(
+                "best_model.h5", save_best_only=True, monitor="loss"
+                ),
+            #keras.callbacks.ReduceLROnPlateau(
+            #    monitor="val_top_k_categorical_accuracy",
+            #    factor=0.2,
+            #    patience=2,
+            #    min_lr=0.000001,
+            #    ),
+            #keras.callbacks.EarlyStopping(monitor='loss',
+            #                              patience=2,
+            #                              mode='min')
+            ]
 
-    epochs = 5
+###############################################################################
+        #precisions = []
+        #recalls = []
+        conv_model = create_model(len(features), WINDOW_SIZE, len(set(scores)))
 
-    optimizer = keras.optimizers.Adam(amsgrad=True, learning_rate=0.001)
-    loss = keras.losses.CategoricalCrossentropy()
+        #print(conv_model.summary())
 
 
 ###############################################################################
-    conv_model.compile(
-        optimizer=optimizer,
-        loss=loss,
-        metrics=[
-            keras.metrics.TopKCategoricalAccuracy(k=5),
-            keras.metrics.CategoricalAccuracy(),
-            keras.metrics.AUC(),
-            keras.metrics.Precision(),
-            keras.metrics.Recall(),
-        ],
-    )
 
+        epochs = 5
 
-    conv_model_history = conv_model.fit(
-        train_dataset,
-        epochs=epochs,
-        callbacks=callbacks,
-        validation_data=test_dataset,
-        class_weight=weight_dict,
-    )
+        optimizer = keras.optimizers.Adam(amsgrad=True, learning_rate=0.0001)
+        loss = keras.losses.CategoricalCrossentropy()
 
 
 ###############################################################################
-    loss, topk_accuracy, accuracy, auc, precision, recall = conv_model.evaluate(test_dataset)
-    print(f"Loss : {loss}")
-    print(f"Top k Accuracy (k=5) : {topk_accuracy}")
-    print(f"Accuracy : {accuracy}")
-    print(f"Area under the Curve (ROC) : {auc}")
-    print(f"Precision : {precision}")
-    print(f"Recall : {recall}")
+        conv_model.compile(
+            optimizer=optimizer,
+            loss=loss,
+            metrics=[
+                keras.metrics.CategoricalAccuracy(),
+                keras.metrics.AUC(),
+                keras.metrics.Precision(),
+                keras.metrics.Recall(),
+                ],
+            )
+
+        conv_model_history = conv_model.fit(
+            train_dataset,
+            epochs=epochs,
+            callbacks=callbacks,
+            validation_data=test_dataset,
+            class_weight=weight_dict,
+            )
+
+
+###############################################################################
+        loss, cat_accuracy, auc, precision, recall = conv_model.evaluate(test_dataset)
     
-    #precisions.append(precision)
-    #recalls.append(recall)
-    return (precision, recall)
+        if not ((precision == 0) and ((recall == 0))):
+            f1_score = 2 *(precision*recall)/(precision+recall)
+        else:
+            f1_score = 0
 
-
-(precision, recall) = test_different_features(all_features)
+        print(f"Loss : {loss}")
+        print(f"Categorical Accuracy : {cat_accuracy}")
+        print(f"Area under the Curve (ROC) : {auc}")
+        print(f"Precision : {precision}")
+        print(f"Recall : {recall}")
+        print(f"F1-score : {f1_score}")
+            
+        acc_per_fold.append(cat_accuracy)
+        f1_per_fold.append(f1_score)
         
-if not ((precision == 0) and ((recall == 0))):
-    f1_score = 2 *(precision*recall)/(precision+recall)
-else:
-    f1_score = 0
+        # Increase fold number
+        fold_no = fold_no + 1
 
-#print(precision)
-#print(recall)
-print(f"F1-score : {f1_score}")
+    print(acc_per_fold)
+    print(f1_per_fold)
+    
+    print(mean(acc_per_fold))
+    print(mean(f1_per_fold))
+
+
+test_different_features(all_features)
+        
  
 ###############################################################################
 ###############################################################################

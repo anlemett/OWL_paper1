@@ -11,10 +11,11 @@ def create_model(number_of_features, window_size, number_of_classes):
             filters=number_of_features, kernel_size=3, strides=2, activation="relu", padding="same"
         ),        
         #layers.LSTM(hidden_nodes, return_sequences=False, input_shape=(number_of_features*window_size, 1)),
-        layers.Dropout(0.2),
+        #layers.Dropout(0.2),
         #layers.BatchNormalization(),
         layers.Flatten(),
-        layers.Dense(3)
+        #layers.Dense(2, activation="softmax") #  loss - CategoricalCrossentropy
+        layers.Dense(2, activation="sigmoid")  # loss - BinaryCrossentropy
         ])
 
     return model

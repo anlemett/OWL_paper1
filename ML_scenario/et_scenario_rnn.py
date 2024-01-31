@@ -121,12 +121,12 @@ def test_different_features(features):
         keras.callbacks.ModelCheckpoint(
             "best_model.h5", save_best_only=True, monitor="loss"
             ),
-        keras.callbacks.ReduceLROnPlateau(
-            monitor="val_top_k_categorical_accuracy",
-            factor=0.2,
-            patience=2,
-            min_lr=0.000001,
-            ),
+        #keras.callbacks.ReduceLROnPlateau(
+        #    monitor="val_top_k_categorical_accuracy",
+        #    factor=0.2,
+        #    patience=2,
+        #    min_lr=0.000001,
+        #    ),
         #keras.callbacks.EarlyStopping(monitor='loss',
         #                              patience=2,
         #                              mode='min')
@@ -145,7 +145,8 @@ def test_different_features(features):
     epochs = 5
 
     optimizer = keras.optimizers.Adam(amsgrad=True, learning_rate=0.001)
-    loss = keras.losses.CategoricalCrossentropy()
+    #loss = keras.losses.CategoricalCrossentropy()
+    loss = keras.losses.BinaryCrossentropy()
 
 
 ###############################################################################
@@ -153,8 +154,7 @@ def test_different_features(features):
         optimizer=optimizer,
         loss=loss,
         metrics=[
-            keras.metrics.TopKCategoricalAccuracy(k=3),
-            #keras.metrics.Accuracy(),
+            keras.metrics.CategoricalAccuracy(),
             keras.metrics.AUC(),
             keras.metrics.Precision(),
             keras.metrics.Recall(),
@@ -174,7 +174,7 @@ def test_different_features(features):
 ###############################################################################
     loss, accuracy, auc, precision, recall = conv_model.evaluate(test_dataset)
     print(f"Loss : {loss}")
-    print(f"Top 3 Categorical Accuracy : {accuracy}")
+    print(f"Accuracy : {accuracy}")
     print(f"Area under the Curve (ROC) : {auc}")
     print(f"Precision : {precision}")
     print(f"Recall : {recall}")
@@ -184,75 +184,21 @@ def test_different_features(features):
     return (precision, recall)
 
 
-precisions = []
-recalls = []
+(precision, recall) = test_different_features(all_features)
+if not ((precision == 0) and ((recall == 0))):
+    f1_score = 2* (precision*recall)/(precision+recall)
+else:
+    f1_score = 0
+#print(precision)
+#print(recall)
+print(f"F1-score : {f1_score}")
 
-precision_best_combination = []
-recall_best_combination = []
-f1_score_best_combination = []
-best_precision = 0
-best_recall = 0
-best_f1_score = 0
-
-#for i in range (1, 16):
-for i in range (1, 4):
-    
-    combinations = list(itertools.combinations(all_features, i))
-    
-    number_of_combinations = len(combinations)
-
-    for j in range(0, number_of_combinations):
-        f = open('results.txt', 'a')
-        print("Number of features, number of combinations, combination")
-        print(i, number_of_combinations, j)
         
-        (precision, recall) = test_different_features(list(combinations[j]))
-    
-    #for j in range(0, 1):
-        #(precision, recall) = test_different_features(all_features)
-        if not ((precision == 0) and ((recall == 0))):
-            f1_score = (precision*recall)/(precision+recall)
-        else:
-            f1_score = 0
-        print(precision)
-        print(recall)
-        print(f1_score)
+#f = open('results.txt', 'a')
+#f.write("Precision\n")
+#f.write(str(precision)+'\n')
+#f.close()
         
-        if precision > best_precision:
-            best_precision = precision
-            precision_best_combination = combinations[j]
-        if recall > best_recall:
-            best_recall = recall
-            recall_best_combination = combinations[j]
-        if f1_score > best_f1_score:
-            best_f1_score = f1_score
-            f1_score_best_combination = combinations[j]
-        
-        f.write("Number of features\n")
-        f.write(str(i)+'\n')
-        f.write("number of combinations\n")
-        f.write(str(number_of_combinations)+'\n')
-        f.write("combination\n")
-        f.write(str(j)+'\n')
-        f.write("Best precision\n")
-        f.write(str(best_precision)+'\n')
-        f.write(str(precision_best_combination)+'\n')
-        f.write("Best recall\n")
-        f.write(str(best_recall)+'\n')
-        f.write(str(recall_best_combination)+'\n')
-        f.write("Best f1-score\n")
-        f.write(str(best_f1_score)+'\n')
-        f.write(str(f1_score_best_combination)+'\n')
-        f.close()
-        
-    
-print(best_precision)
-print(precision_best_combination)
-print(best_recall)
-print(recall_best_combination)
-print(best_f1_score)
-print(f1_score_best_combination)
-
  
 ###############################################################################
 ###############################################################################
