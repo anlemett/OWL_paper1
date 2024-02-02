@@ -42,7 +42,7 @@ filenames = ["D1r1_MO", "D1r2_MO", "D1r3_MO",
              "D9r4_SV", "D9r5_SV", "D9r6_SV"
              ]
 #for testing
-#filenames = ["D1r1_MO"]
+filenames = ["D2r3_KV"]
 
 for filename in filenames:
     full_filename = os.path.join(INPUT_DIR, "ET_" + filename +  ".csv")

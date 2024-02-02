@@ -42,7 +42,7 @@ filenames = ["D1r1_MO", "D1r2_MO", "D1r3_MO",
              ]
 
 # for testing
-#filenames = ["D1r1_MO"]
+filenames = ["D2r3_KV"]
 
 
 for filename in filenames:
