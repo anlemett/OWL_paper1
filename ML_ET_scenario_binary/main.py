@@ -11,10 +11,9 @@ from tensorflow import keras
 
 from sklearn import preprocessing, model_selection
 
-from et_rnn_model import create_model
-from et_ts_np import get_TS_np
+from rnn_model import create_model
+from ts_np import get_TS_np
 
-#TIME_INTERVAL_DURATION = 180  #sec
 TIME_INTERVAL_DURATION = 60  #sec
 WINDOW_SIZE = 250 * TIME_INTERVAL_DURATION
 
@@ -25,11 +24,9 @@ all_features = ['Saccade', 'Fixation',
             'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
             'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
             'HeadHeading', 'HeadPitch',	'HeadRoll']
-# for testing:
-#all_features = ['LeftBlinkOpeningAmplitude', 'LeftBlinkClosingSpeed', 'RightBlinkClosingAmplitude']
 
 #to make the result reproducable
-keras.utils.set_random_seed(1)
+keras.utils.set_random_seed(42)
 
 ###############################################################################
 # Test defferent features
