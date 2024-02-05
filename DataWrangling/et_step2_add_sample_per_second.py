@@ -66,7 +66,7 @@ for filename in filenames:
     df['SamplePerSecond'] = sample_per_second_lst
 
     columns = ['UnixTimestamp'] + ['SamplePerSecond'] + metrics_list
-    df = df[columns]
+    df = df[-columns]
 
     full_filename = os.path.join(OUTPUT_DIR, "ET_" + filename +  ".csv")
     df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)

@@ -14,7 +14,7 @@ from sklearn import preprocessing, model_selection
 from rnn_model import create_model
 from ts_np import get_TS_np
 
-TIME_INTERVAL_DURATION = 180  #sec
+TIME_INTERVAL_DURATION = 60  #sec
 WINDOW_SIZE = 250 * TIME_INTERVAL_DURATION
 
 all_features = ['Saccade', 'Fixation',
@@ -166,7 +166,7 @@ def test_different_features(features):
         epochs = 10
 
         optimizer = keras.optimizers.Adam(amsgrad=True, learning_rate=0.0001)
-        loss = keras.losses.BinaryCrossentropy()
+        loss = keras.losses.CategoricalCrossentropy()
 
 
 ###############################################################################

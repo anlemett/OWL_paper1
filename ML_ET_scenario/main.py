@@ -26,7 +26,7 @@ all_features = ['Saccade', 'Fixation',
             'HeadHeading', 'HeadPitch',	'HeadRoll']
 
 #to make the result reproducable
-keras.utils.set_random_seed(42)
+keras.utils.set_random_seed(0)
 
 ###############################################################################
 # Test defferent features

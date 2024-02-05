@@ -28,12 +28,12 @@ FILENAMES_MEDIUM = ["D1r2_MO", "D1r5_EI", "D2r2_KV", "D2r5_UO", "D3r3_KB", "D3r6
                     "D7r1_LS", "D7r6_ML", "D8r3_AP", "D8r4_AK", "D9r3_RE", "D9r5_SV"
                    ]
 
-#FILENAMES_LOW =    ["D1r1_MO"]
-#FILENAMES_HIGH =   ["D1r3_MO"]
-#FILENAMES_MEDIUM = ["D1r2_MO"]
+FILENAMES_LOW =    ["D1r1_MO"]
+FILENAMES_HIGH =   ["D1r3_MO"]
+FILENAMES_MEDIUM = ["D1r2_MO"]
 
 
-def getTimeInterval(timestamp, ch_first_timestamp, first_timestamp, time_interval_duration):
+def getTimeInterval(timestamp, ch_first_timestamp, time_interval_duration):
 
     if timestamp < ch_first_timestamp:
         return 0
@@ -63,11 +63,8 @@ def create_TS_np(df, features, time_interval_duration, scores_df, scenario_score
     
     ch_first_timestamp = scores_df['timestamp'].loc[0]
     
-    first_timestamp = df['UnixTimestamp'].loc[0]
-
     df['timeInterval'] = df.apply(lambda row: getTimeInterval(row['UnixTimestamp'],
                                                               ch_first_timestamp,
-                                                              first_timestamp,
                                                               time_interval_duration
                                                               ),
                                   axis=1) 
@@ -75,17 +72,13 @@ def create_TS_np(df, features, time_interval_duration, scores_df, scenario_score
     new_columns = ['timeInterval'] + columns
     df = df[new_columns]
   
-    time_intervals_set= set(df['timeInterval'].tolist())
-    
-    print(time_intervals_set)
-    time_intervals_set.discard(0) # will not raise an error if the element does not exist
-    time_intervals_set.remove(max(time_intervals_set))  #drop the last incomplete interval
-    print(time_intervals_set)
-    number_of_time_intervals = len(time_intervals_set)
-    
+    scores = scores_df['score'].tolist()
+    del scores[0]
+  
+    number_of_time_intervals = len(scores)    
     print(number_of_time_intervals)
     
-    scores = [scenario_score for ti in time_intervals_set]
+    scores = [scenario_score]*number_of_time_intervals
     print(scores) 
     
     #####################################
