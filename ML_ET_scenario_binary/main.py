@@ -14,8 +14,7 @@ from sklearn import preprocessing, model_selection
 from rnn_model import create_model
 from ts_np import get_TS_np
 
-TIME_INTERVAL_DURATION = 60  #sec
-WINDOW_SIZE = 250 * TIME_INTERVAL_DURATION
+WINDOW_SIZE = 250 * 180
 
 all_features = ['Saccade', 'Fixation',
             'LeftPupilDiameter', 'RightPupilDiameter',
@@ -26,7 +25,7 @@ all_features = ['Saccade', 'Fixation',
             'HeadHeading', 'HeadPitch',	'HeadRoll']
 
 #to make the result reproducable
-keras.utils.set_random_seed(42)
+keras.utils.set_random_seed(0)
 
 ###############################################################################
 # Test defferent features
@@ -34,7 +33,7 @@ keras.utils.set_random_seed(42)
 
 def test_different_features(features):
 ###############################################################################
-    (TS_np, scores) = get_TS_np(features, TIME_INTERVAL_DURATION)
+    (TS_np, scores) = get_TS_np(features)
 
 ###############################################################################
     #Shuffle data
@@ -163,7 +162,7 @@ def test_different_features(features):
 
 ###############################################################################
 
-        epochs = 5
+        epochs = 10
 
         optimizer = keras.optimizers.Adam(amsgrad=True, learning_rate=0.0001)
         loss = keras.losses.BinaryCrossentropy()

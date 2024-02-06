@@ -10,10 +10,6 @@ def create_model(number_of_features, window_size, number_of_classes):
     c = 2*b
     d = 2*c
     
-    e = 10*number_of_features
-    f = 2*e
-    g = 2*f
-    
     model = models.Sequential([
         #layers.Conv1D(
         #    filters=a, kernel_size=3, strides=2, activation="relu", padding="same"
@@ -21,17 +17,17 @@ def create_model(number_of_features, window_size, number_of_classes):
         #layers.BatchNormalization(),
         
         layers.Conv1D(
-            filters=e, kernel_size=3, strides=2, activation="relu", padding="same"
+            filters=b, kernel_size=3, strides=2, activation="relu", padding="same"
         ),
         layers.BatchNormalization(),
         
         layers.Conv1D(
-            filters=f, kernel_size=3, strides=2, activation="relu", padding="same"
+            filters=c, kernel_size=3, strides=2, activation="relu", padding="same"
         ),
         layers.BatchNormalization(),
 
         layers.Conv1D(
-            filters=g, kernel_size=3, strides=2, activation="relu", padding="same"
+            filters=d, kernel_size=3, strides=2, activation="relu", padding="same"
         ),
         layers.BatchNormalization(),
 

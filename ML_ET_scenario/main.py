@@ -14,8 +14,7 @@ from sklearn import preprocessing, model_selection
 from rnn_model import create_model
 from ts_np import get_TS_np
 
-TIME_INTERVAL_DURATION = 180  #sec
-WINDOW_SIZE = 250 * TIME_INTERVAL_DURATION
+WINDOW_SIZE = 250 * 180
 
 all_features = ['Saccade', 'Fixation',
             'LeftPupilDiameter', 'RightPupilDiameter',
@@ -34,7 +33,7 @@ keras.utils.set_random_seed(0)
 
 def test_different_features(features):
 ###############################################################################
-    (TS_np, scores) = get_TS_np(features, TIME_INTERVAL_DURATION)
+    (TS_np, scores) = get_TS_np(features)
 
 ###############################################################################
     #Shuffle data

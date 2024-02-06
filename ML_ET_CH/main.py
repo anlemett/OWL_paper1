@@ -14,8 +14,7 @@ from sklearn import preprocessing, model_selection
 from rnn_model import create_model
 from ts_np import get_TS_np
 
-TIME_INTERVAL_DURATION = 180  #sec
-WINDOW_SIZE = 250 * TIME_INTERVAL_DURATION
+WINDOW_SIZE = 250 * 180
 
 all_features = ['Saccade', 'Fixation',
             'LeftPupilDiameter', 'RightPupilDiameter',
@@ -26,7 +25,7 @@ all_features = ['Saccade', 'Fixation',
             'HeadHeading', 'HeadPitch',	'HeadRoll']
 
 #to make the result reproducable
-keras.utils.set_random_seed(42)
+keras.utils.set_random_seed(0)
 
 ###############################################################################
 # Test defferent features
@@ -34,14 +33,14 @@ keras.utils.set_random_seed(42)
 
 def test_different_features(features):
 ###############################################################################
-    (TS_np, scores) = get_TS_np(features, TIME_INTERVAL_DURATION)
+    (TS_np, scores) = get_TS_np(features)
 
 ###############################################################################
     #Shuffle data
 
     scores_np = np.array(scores)
-    #print(TS_np.shape)
-    #print(scores_np.shape)
+    print(TS_np.shape)
+    print(scores_np.shape)
 
     zipped = list(zip(TS_np, scores_np))
 
@@ -55,9 +54,7 @@ def test_different_features(features):
     
     max_score = max(scores)
     print(f"Max score : {max_score}")
-    #print(set(scores))
-    
-    print(len(set(scores)))
+    print(set(scores))
     #sys.exit(0)
 
 
@@ -117,12 +114,12 @@ def test_different_features(features):
         x_train = np.asarray(train_X).astype(np.float32).reshape(-1, WINDOW_SIZE, len(features))
 
         y_train = np.asarray(train_Y).astype(np.float32).reshape(-1, 1)
-        y_train = keras.utils.to_categorical(y_train,num_classes=max_score) # transform to one-hot label
+        y_train = keras.utils.to_categorical(y_train) # transform to one-hot label
 
     #x_test = np.asarray(test_X).astype(np.float32).reshape(-1, len(features)*WINDOW_SIZE, 1)
         x_test = np.asarray(test_X).astype(np.float32).reshape(-1, WINDOW_SIZE, len(features))
         y_test = np.asarray(test_Y).astype(np.float32).reshape(-1, 1)
-        y_test = keras.utils.to_categorical(y_test,num_classes=max_score) # transform to one-hot label
+        y_test = keras.utils.to_categorical(y_test) # transform to one-hot label
 
         print(x_train.shape)
         print(y_train.shape)
@@ -132,15 +129,7 @@ def test_different_features(features):
         BATCH_SIZE = 1
 
         train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-        print(fold_no)
-        print("x_train, y_train")
-        print(x_train.shape)
-        print(y_train.shape)
         test_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test))
-        print("x_test, y_test")
-        print(x_test.shape)
-        print(y_test.shape)
-        print(y_test)
 
         #train_dataset = train_dataset.shuffle(SHUFFLE_BUFFER_SIZE).batch(BATCH_SIZE)
         train_dataset = train_dataset.batch(BATCH_SIZE)
@@ -173,7 +162,7 @@ def test_different_features(features):
 
 ###############################################################################
 
-        epochs = 5
+        epochs = 10
 
         optimizer = keras.optimizers.Adam(amsgrad=True, learning_rate=0.0001)
         loss = keras.losses.CategoricalCrossentropy()
@@ -190,6 +179,7 @@ def test_different_features(features):
                 keras.metrics.Recall(),
                 ],
             )
+
 
         conv_model_history = conv_model.fit(
             train_dataset,
