@@ -78,9 +78,9 @@ def get_TS_np(features):
                     dim2_idx = dim2_idx + 1
                  
                 dim1_idx = dim1_idx + 1
-                #run_score = all_run_scores[ti-1]
-                score = all_run_scores[ti-1]
-                run_score = 1 if score<2 else 3 if score>2 else 2
+                run_score = all_run_scores[ti-1]
+                #score = all_run_scores[ti-1]
+                #run_score = 1 if score<2 else 3 if score>2 else 2
                 run_scores.extend([run_score])
                 
             if dim1_idx < number_of_time_intervals:
@@ -88,7 +88,6 @@ def get_TS_np(features):
                 
             TS_np = np.append(TS_np, run_TS_np, axis=0)
             all_scores.extend(run_scores)
-
 
     return (TS_np, all_scores)
 

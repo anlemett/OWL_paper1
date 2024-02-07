@@ -9,16 +9,27 @@ import sys
 
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
+ET_DIR = os.path.join(DATA_DIR, "EyeTracking4")
+CH_DIR = os.path.join(DATA_DIR, "CH2")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
+
+WINDOW_SIZE = 250 * 180
+
+features = ['Saccade', 'Fixation',
+            'LeftPupilDiameter', 'RightPupilDiameter',
+            'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
+            'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
+            'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
+            'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
+            'HeadHeading', 'HeadPitch',	'HeadRoll']
+
 
 ATCOs = ['MO', 'EI', 'KV', 'UO', 'KB', 'PF', 'AL', 'IH', 'RI',
          'JO', 'AE', 'HC', 'LS', 'ML', 'AP', 'AK', 'RE', 'SV']
 
-SPLIT_BY_QUANTILE = True
-
-def get_TS_np(features, time_interval_duration):
+def get_TS_np(features):
     
-    window_size = 250 * time_interval_duration
+    window_size = 250 * 180
     number_of_features = len(features)
     
     # TS_np shape (a,b,c):
@@ -32,12 +43,12 @@ def get_TS_np(features, time_interval_duration):
     
     #**************************************
     print("Reading Eye Tracking data")
-    full_filename = os.path.join(ML_DIR, "ML_ET_" + str(time_interval_duration) + ".csv")
+    full_filename = os.path.join(ET_DIR, "ET_all_180.csv")
     et_df = pd.read_csv(full_filename, sep=' ', low_memory=False)
 
-    print("Reading EEG data")
-    full_filename = os.path.join(ML_DIR, "ML_EEG_" + str(time_interval_duration) + ".csv")
-    eeg_df = pd.read_csv(full_filename, sep=' ', low_memory=False)
+    print("Reading CH data")
+    full_filename = os.path.join(CH_DIR, "CH_all.csv")
+    ch_df = pd.read_csv(full_filename, sep=' ', low_memory=False)
      
        
     dim1_idx = 0
@@ -45,50 +56,43 @@ def get_TS_np(features, time_interval_duration):
     for atco in ATCOs:
         print(atco)
         et_atco_df = et_df[et_df['ATCO']==atco]
-        eeg_atco_df = eeg_df[eeg_df['ATCO']==atco]
-        
-        if et_atco_df.empty or eeg_atco_df.empty:
+        ch_atco_df = ch_df[ch_df['ATCO']==atco]
+                
+        if et_atco_df.empty:
             continue
         
         for run in range(1,4):
             et_run_df = et_atco_df[et_atco_df['Run']==run]
-            eeg_run_df = eeg_atco_df[eeg_atco_df['Run']==run]
+            ch_run_df = ch_atco_df[ch_atco_df['Run']==run]
             
-            if et_run_df.empty or eeg_run_df.empty:
+            if et_run_df.empty:
                 continue
         
-            number_of_time_intervals = len(eeg_run_df['timeInterval'].tolist())
+            number_of_time_intervals = len(ch_run_df.index)
         
             run_TS_np = np.zeros(shape=(number_of_time_intervals, window_size, number_of_features))
+            print(run_TS_np.shape)
+            all_run_scores = ch_run_df['score'].tolist() 
             run_scores = []
-            
+                        
             print(number_of_time_intervals)
             dim1_idx = 0
             for ti in range(1, number_of_time_intervals+1):
                 et_ti_df = et_run_df[et_run_df['timeInterval']==ti]
-                eeg_ti_df = eeg_run_df[eeg_run_df['timeInterval']==ti]
-                                
-                ti_score_lst = eeg_ti_df['WorkloadMean'].tolist()
-                
-                if et_ti_df.empty or not ti_score_lst:
+                                               
+                if et_ti_df.empty or all_run_scores[ti-1]==0:
                     continue
-                
-                ti_score = ti_score_lst[0]
-                
+                       
                 dim2_idx = 0
                 for index, row in et_ti_df.iterrows():
                     #exclude ATCO, Run, timeInterval, UnixTimestamp, SamplePerSecond
                     lst_of_features = row.values.tolist()[5:]
                     run_TS_np[dim1_idx, dim2_idx] = lst_of_features
                     dim2_idx = dim2_idx + 1
-                    
-                if SPLIT_BY_QUANTILE:
-                    run_scores.append(ti_score)
-                else:
-                    score = 1 if ti_score < 0.5 else 2
-                    run_scores.append(score)
-                        
+                 
                 dim1_idx = dim1_idx + 1
+                run_score = all_run_scores[ti-1]
+                run_scores.extend([run_score])
                 
             if dim1_idx < number_of_time_intervals:
                 run_TS_np = run_TS_np[:dim1_idx]
@@ -96,11 +100,22 @@ def get_TS_np(features, time_interval_duration):
             TS_np = np.append(TS_np, run_TS_np, axis=0)
             all_scores.extend(run_scores)
 
-    if SPLIT_BY_QUANTILE:
-        #Split into 2 bins with ap. equal amount of values
-        eeg_series = pd.Series(all_scores)
-        th = eeg_series.quantile(0.5)
-        all_scores = [1 if score < th else 2 for score in all_scores]
-
     return (TS_np, all_scores)
+
+(TS_np, scores) = get_TS_np(features)
+
+print(TS_np.shape) # (667, 45000, 15)
+print(len(scores))
+
+# Reshape the 3D array to 2D
+TS_np_reshaped = TS_np.reshape(TS_np.shape[0], -1)
+
+# Save the 2D array to a CSV file
+full_filename = os.path.join(ML_DIR, "ML_ET_CH__ET.csv")
+np.savetxt(full_filename, TS_np_reshaped, delimiter=" ")
+
+# Save scores to a CSV file
+full_filename = os.path.join(ML_DIR, "ML_ET_CH__CH.csv")
+np.savetxt(full_filename, np.asarray(scores) , fmt='%i', delimiter=" ")
+
 

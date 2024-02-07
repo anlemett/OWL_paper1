@@ -77,8 +77,8 @@ def get_TS_np(features):
                     dim2_idx = dim2_idx + 1
                  
                 dim1_idx = dim1_idx + 1
-                #run_score = all_run_scores[ti-1]
-                run_score = 1 if all_run_scores[ti-1]<3 else 2
+                score = all_run_scores[ti-1]
+                run_score = 1 if score<2 else 2
                 run_scores.extend([run_score])
                 
             if dim1_idx < number_of_time_intervals:

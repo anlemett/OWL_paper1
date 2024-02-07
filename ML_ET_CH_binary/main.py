@@ -114,19 +114,19 @@ def test_different_features(features):
         x_train = np.asarray(train_X).astype(np.float32).reshape(-1, WINDOW_SIZE, len(features))
 
         y_train = np.asarray(train_Y).astype(np.float32).reshape(-1, 1)
-        y_train = keras.utils.to_categorical(y_train) # transform to one-hot label
+        y_train = keras.utils.to_categorical(y_train, num_classes=2) # transform to one-hot label
 
     #x_test = np.asarray(test_X).astype(np.float32).reshape(-1, len(features)*WINDOW_SIZE, 1)
         x_test = np.asarray(test_X).astype(np.float32).reshape(-1, WINDOW_SIZE, len(features))
         y_test = np.asarray(test_Y).astype(np.float32).reshape(-1, 1)
-        y_test = keras.utils.to_categorical(y_test) # transform to one-hot label
+        y_test = keras.utils.to_categorical(y_test, num_classes=2) # transform to one-hot label
 
         print(x_train.shape)
         print(y_train.shape)
 
 ###############################################################################
-    #BATCH_SIZE = 1
-        BATCH_SIZE = 1
+        #BATCH_SIZE = 1
+        BATCH_SIZE = 16
 
         train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
         test_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test))
@@ -162,7 +162,8 @@ def test_different_features(features):
 
 ###############################################################################
 
-        epochs = 10
+        #epochs = 10
+        epochs = 20
 
         optimizer = keras.optimizers.Adam(amsgrad=True, learning_rate=0.0001)
         loss = keras.losses.BinaryCrossentropy()
@@ -216,9 +217,11 @@ def test_different_features(features):
     
     print(mean(acc_per_fold))
     print(mean(f1_per_fold))
+    
+    return conv_model_history
 
 
-test_different_features(all_features)
+conv_model_history = test_different_features(all_features)
         
  
 ###############################################################################
@@ -242,5 +245,5 @@ def plot_history_metrics(history: keras.callbacks.History):
         plt.title(str(key))
     plt.show()
 
-#plot_history_metrics(conv_model_history)
+plot_history_metrics(conv_model_history)
 
