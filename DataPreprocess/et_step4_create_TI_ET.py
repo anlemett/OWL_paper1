@@ -11,8 +11,8 @@ from sklearn import preprocessing
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
 ET_DIR = os.path.join(DATA_DIR, "EyeTracking3")
-CH_DIR = os.path.join(DATA_DIR, "CH")
-OUTPUT_DIR = os.path.join(DATA_DIR, "MLInput")
+CH_DIR = os.path.join(DATA_DIR, "CH1")
+OUTPUT_DIR = os.path.join(DATA_DIR, "EyeTracking4")
 
 TIME_INTERVAL_DURATION = 60  #sec
 
@@ -53,7 +53,7 @@ def getTimeInterval(timestamp, ch_first_timestamp, ch_last_timestamp):
     return math.trunc((timestamp - ch_first_timestamp)/TIME_INTERVAL_DURATION) + 1
 
 
-ML_df = pd.DataFrame()
+TI_df = pd.DataFrame()
 
 for atco in filenames:
     atco_df = pd.DataFrame()
@@ -61,10 +61,10 @@ for atco in filenames:
     for filename in atco:
         print(filename)
         full_filename = os.path.join(ET_DIR, 'ET_' + filename +  ".csv")
-        df = pd.read_csv(full_filename, sep=' ', low_memory=False)
+        df = pd.read_csv(full_filename, sep=' ')
         
         full_filename = os.path.join(CH_DIR, filename + ".csv")
-        scores_df = pd.read_csv(full_filename, sep=' ', low_memory=False)
+        scores_df = pd.read_csv(full_filename, sep=' ')
         
         ch_first_timestamp = scores_df['timestamp'].loc[0]
         ch_last_timestamp = scores_df['timestamp'].tolist()[-1]
@@ -98,8 +98,8 @@ for atco in filenames:
         atco_df[feature] = scaled_feature_lst
     #####################################
     
-    ML_df = pd.concat([ML_df, atco_df], ignore_index=True)
+    TI_df = pd.concat([TI_df, atco_df], ignore_index=True)
 
-full_filename = os.path.join(OUTPUT_DIR, "ML_ET_" + str(TIME_INTERVAL_DURATION) + ".csv")
-ML_df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)
+full_filename = os.path.join(OUTPUT_DIR, "ET_all_" + str(TIME_INTERVAL_DURATION) + ".csv")
+TI_df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)
 

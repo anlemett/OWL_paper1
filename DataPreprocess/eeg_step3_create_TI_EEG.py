@@ -55,10 +55,10 @@ for atco in filenames:
     for filename in atco:
         print(filename)
         full_filename = os.path.join(EEG_DIR, filename +  ".csv")
-        df = pd.read_csv(full_filename, sep=' ', low_memory=False)
+        df = pd.read_csv(full_filename, sep=' ')
         
         full_filename = os.path.join(CH_DIR, filename + ".csv")
-        scores_df = pd.read_csv(full_filename, sep=' ', low_memory=False)
+        scores_df = pd.read_csv(full_filename, sep=' ')
         
         ch_first_timestamp = scores_df['timestamp'].loc[0]
         ch_last_timestamp = scores_df['timestamp'].tolist()[-1]

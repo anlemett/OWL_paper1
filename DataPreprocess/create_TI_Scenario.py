@@ -63,7 +63,7 @@ for atco in filenames:
         print(filename)
         
         full_filename = os.path.join(CH_DIR, filename + ".csv")
-        scores_df = pd.read_csv(full_filename, sep=' ', low_memory=False)
+        scores_df = pd.read_csv(full_filename, sep=' ')
         
         timeintervals = scores_df['timestamp'].tolist()
         number_of_time_intervals = len(timeintervals)-1

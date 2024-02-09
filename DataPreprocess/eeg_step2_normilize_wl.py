@@ -40,7 +40,7 @@ for atco in filenames:
     for filename in atco:
         print(filename)
         full_filename = os.path.join(INPUT_DIR, filename +  ".csv")
-        df = pd.read_csv(full_filename, sep=' ', low_memory=False)
+        df = pd.read_csv(full_filename, sep=' ')
         atco_df = pd.concat([atco_df, df], ignore_index=True)
     
     atco_min = atco_df['workload'].min()
@@ -48,7 +48,7 @@ for atco in filenames:
     
     for filename in atco:
         full_filename = os.path.join(INPUT_DIR, filename +  ".csv")
-        df = pd.read_csv(full_filename, sep=' ', low_memory=False)   
+        df = pd.read_csv(full_filename, sep=' ')
     
         df['WL'] = df.apply(lambda row: normilize(atco_min, atco_max, row['workload']), axis=1)
     

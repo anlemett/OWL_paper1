@@ -82,34 +82,34 @@ def calculate_stat(participant_id, df_low, df_medium, df_high):
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D1r1_MO.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D1r3_MO.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D1r2_MO.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('MO', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D1r6_EI.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D1r4_EI.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D1r5_EI.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('EI', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D2r3_KV.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D2r1_KV.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 df_medium = pd.DataFrame()
 
@@ -117,180 +117,180 @@ calculate_stat('KV', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D2r4_UO.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D2r6_UO.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D2r5_UO.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('UO', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D3r1_KB.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D3r3_KB.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D3r2_KB.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('KB', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D3r5_PF.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D3r4_PF.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D3r6_PF.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('PF', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D4r3_AL.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D4r2_AL.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D4r1_AL.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('AL', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D4r4_IH.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D4r5_IH.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D4r6_IH.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('IH', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D5r2_RI.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D5r3_RI.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D5r1_RI.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('RI', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D5r5_JO.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D5r4_JO.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D5r6_JO.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('JO', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D6r3_AE.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D6r2_AE.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D6r1_AE.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('AE', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D6r5_HC.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D6r6_HC.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D6r4_HC.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('HC', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D7r3_LS.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D7r2_LS.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D7r1_LS.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('LS', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D7r4_ML.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D7r5_ML.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D7r6_ML.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('ML', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D8r1_AP.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D8r2_AP.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D8r3_AP.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('AP', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D8r6_AK.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D8r5_AK.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D8r4_AK.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('AK', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D9r2_RE.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D9r1_RE.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D9r3_RE.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('RE', df_low, df_medium, df_high)
 
 ###############################################################################
 filename = os.path.join(DATA_DIR, "D9r6_SV.log")
-df_low = pd.read_csv(filename, sep='\t', low_memory=False)
+df_low = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D9r4_SV.log")
-df_high = pd.read_csv(filename, sep='\t', low_memory=False)
+df_high = pd.read_csv(filename, sep='\t')
 
 filename = os.path.join(DATA_DIR, "D9r5_SV.log")
-df_medium = pd.read_csv(filename, sep='\t', low_memory=False)
+df_medium = pd.read_csv(filename, sep='\t')
 
 calculate_stat('SV', df_low, df_medium, df_high)

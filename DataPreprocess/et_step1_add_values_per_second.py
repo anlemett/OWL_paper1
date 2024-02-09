@@ -8,7 +8,7 @@ import pandas as pd
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
 INPUT_DIR = os.path.join(DATA_DIR, "EyeTrackingRaw")
-OUTPUT_DIR = os.path.join(DATA_DIR, "EyeTracking")
+OUTPUT_DIR = os.path.join(DATA_DIR, "EyeTracking1")
 
 metrics_list = ['Saccade', 'Fixation',
                 'LeftPupilDiameter', 'RightPupilDiameter',
@@ -52,7 +52,7 @@ filenames = ["D1r1_MO", "D1r2_MO", "D1r3_MO",
 
 for filename in filenames:
     full_filename = os.path.join(INPUT_DIR, filename +  ".log")
-    df = pd.read_csv(full_filename, sep='\t', low_memory=False)
+    df = pd.read_csv(full_filename, sep='\t')
 
     df['UnixTimestamp'] = df.apply(lambda row: getUnixTimestamp(row['RealTimeClock']), axis=1)
 

@@ -9,11 +9,11 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 
 #DATA_DIR = os.path.join(DATA_DIR, "EyeTrackingRaw")
 #filename = os.path.join(DATA_DIR, "D3r2r3.log")
-#df = pd.read_csv(filename, sep='\t', low_memory=False)
+#df = pd.read_csv(filename, sep='\t')
 
-DATA_DIR = os.path.join(DATA_DIR, "EyeTracking")
+DATA_DIR = os.path.join(DATA_DIR, "EyeTracking1")
 filename = os.path.join(DATA_DIR, "ET_D2r3_KV.csv")
-df = pd.read_csv(filename, sep=' ', low_memory=False)
+df = pd.read_csv(filename, sep=' ')
 
 print(df.head(1))
 

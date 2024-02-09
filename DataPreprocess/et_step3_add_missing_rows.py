@@ -2,7 +2,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 import os
-import sys
+#import sys
 
 import pandas as pd
 
@@ -42,12 +42,11 @@ filenames = ["D1r1_MO", "D1r2_MO", "D1r3_MO",
              ]
 
 # for testing
-filenames = ["D2r3_KV"]
-
+#filenames = ["D2r3_KV"]
 
 for filename in filenames:
     full_filename = os.path.join(INPUT_DIR, "ET_" + filename +  ".csv")
-    df = pd.read_csv(full_filename, sep=' ', low_memory=False)
+    df = pd.read_csv(full_filename, sep=' ')
         
     df = df[df['SamplePerSecond']<=250]
     

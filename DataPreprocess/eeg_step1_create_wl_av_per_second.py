@@ -43,7 +43,7 @@ filenames = ["D1r1_MO", "D1r2_MO", "D1r3_MO",
 for filename in filenames:
     print(filename)
     full_filename = os.path.join(INPUT_DIR, filename +  ".csv")
-    df = pd.read_csv(full_filename, sep=';', low_memory=False)
+    df = pd.read_csv(full_filename, sep=';')
     df.sort_values(['calculatedAt'], ascending=[True], inplace=True)
     df.reset_index(inplace=True)
 

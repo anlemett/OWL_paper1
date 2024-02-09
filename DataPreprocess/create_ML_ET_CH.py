@@ -5,8 +5,6 @@ import os
 import pandas as pd
 import numpy as np
 
-import sys
-
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
 ET_DIR = os.path.join(DATA_DIR, "EyeTracking4")
@@ -22,7 +20,6 @@ features = ['Saccade', 'Fixation',
             'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
             'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
             'HeadHeading', 'HeadPitch',	'HeadRoll']
-
 
 ATCOs = ['MO', 'EI', 'KV', 'UO', 'KB', 'PF', 'AL', 'IH', 'RI',
          'JO', 'AE', 'HC', 'LS', 'ML', 'AP', 'AK', 'RE', 'SV']
@@ -44,11 +41,11 @@ def get_TS_np(features):
     #**************************************
     print("Reading Eye Tracking data")
     full_filename = os.path.join(ET_DIR, "ET_all_180.csv")
-    et_df = pd.read_csv(full_filename, sep=' ', low_memory=False)
+    et_df = pd.read_csv(full_filename, sep=' ')
 
     print("Reading CH data")
     full_filename = os.path.join(CH_DIR, "CH_all.csv")
-    ch_df = pd.read_csv(full_filename, sep=' ', low_memory=False)
+    ch_df = pd.read_csv(full_filename, sep=' ')
      
        
     dim1_idx = 0
@@ -117,5 +114,3 @@ np.savetxt(full_filename, TS_np_reshaped, delimiter=" ")
 # Save scores to a CSV file
 full_filename = os.path.join(ML_DIR, "ML_ET_CH__CH.csv")
 np.savetxt(full_filename, np.asarray(scores) , fmt='%i', delimiter=" ")
-
-

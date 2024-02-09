@@ -17,7 +17,7 @@ metrics_list = ['Saccade', 'PupilDiameter', 'LeftPupilDiameter', 'RightPupilDiam
 
 metrics_list = ['Saccade', 'PupilDiameter']
 
-anova_df = pd.read_csv(anova_filename, sep=' ', low_memory=False)
+anova_df = pd.read_csv(anova_filename, sep=' ')
 
 for metric in metrics_list:
     

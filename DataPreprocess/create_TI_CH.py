@@ -37,7 +37,7 @@ for atco in filenames:
     for filename in atco:
         print(filename)
         full_filename = os.path.join(CH_DIR, filename + ".csv")
-        scores_df = pd.read_csv(full_filename, sep=' ', low_memory=False)
+        scores_df = pd.read_csv(full_filename, sep=' ')
         
         timestamps = scores_df['timestamp'].tolist()
         scores = scores_df['score'].tolist()
