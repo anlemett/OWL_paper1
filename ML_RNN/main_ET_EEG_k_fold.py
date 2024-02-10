@@ -3,6 +3,7 @@ warnings.filterwarnings('ignore')
 
 import os
 import numpy as np
+import pandas as pd
 from statistics import mean
 
 from sklearn import model_selection
@@ -25,11 +26,11 @@ def main():
 
     # Reshape the 2D array back to its original 3D shape
     # (number_of_timeintervals, TIME_INTERVAL_DURATION*250, number_of_features)
-    # 180 -> (640, 45000, 15), 60 -> (1811, 15000, 15)
+    # 180 -> (631, 45000, 15), 60 -> (1768, 15000, 15)
     if TIME_INTERVAL_DURATION == 180: 
-        TS_np = TS_np.reshape((640, 45000, 15))
+        TS_np = TS_np.reshape((631, 45000, 15))
     else: # 60
-        TS_np = TS_np.reshape((1811, 15000, 15))
+        TS_np = TS_np.reshape((1768, 15000, 15))
 
     full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
 
@@ -51,9 +52,18 @@ def main():
     scores = list(scores_np)
 
     if BINARY:
-        scores = [1 if score < 0.5 else 2 for score in scores]
+        #scores = [1 if score < 0.5 else 2 for score in scores]
+        #Split into 3 bins by percentile
+        eeg_series = pd.Series(scores)
+        th = eeg_series.quantile(.93)
+        scores = [1 if score < th else 2 for score in scores]
+
     else:
-        scores = [1 if score < 0.33 else 3 if score > 0.66 else 2 for score in scores]
+        #scores = [1 if score < 0.33 else 3 if score > 0.66 else 2 for score in scores]
+        #Split into 3 bins by percentile
+        eeg_series = pd.Series(scores)
+        (th1, th2) = eeg_series.quantile([.52, .93])
+        scores = [1 if score < th1 else 3 if score > th2 else 2 for score in scores]
 
     print(scores)
     

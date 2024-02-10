@@ -4,8 +4,9 @@ warnings.filterwarnings('ignore')
 import os
 import pandas as pd
 import numpy as np
+import math
 
-#import sys
+import sys
 
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
@@ -14,7 +15,7 @@ EEG_DIR = os.path.join(DATA_DIR, "EEG4")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 
 
-TIME_INTERVAL_DURATION = 60 #180
+TIME_INTERVAL_DURATION = 180
 WINDOW_SIZE = 250 * TIME_INTERVAL_DURATION
 
 features = ['Saccade', 'Fixation',
@@ -28,7 +29,7 @@ features = ['Saccade', 'Fixation',
 
 ATCOs = ['MO', 'EI', 'KV', 'UO', 'KB', 'PF', 'AL', 'IH', 'RI',
          'JO', 'AE', 'HC', 'LS', 'ML', 'AP', 'AK', 'RE', 'SV']
-
+         
 def get_TS_np(features):
     
     window_size = 250 * TIME_INTERVAL_DURATION
@@ -79,10 +80,12 @@ def get_TS_np(features):
             for ti in range(1, number_of_time_intervals+1):
                 et_ti_df = et_run_df[et_run_df['timeInterval']==ti]
                 eeg_ti_df = eeg_run_df[eeg_run_df['timeInterval']==ti]
-                                
-                ti_score_lst = eeg_ti_df['WorkloadMean'].tolist()
                 
-                if et_ti_df.empty or not ti_score_lst:
+                ti_score_lst = eeg_ti_df['WorkloadMean'].tolist()
+                if math.isnan(ti_score_lst[0]):
+                    continue
+                
+                if et_ti_df.empty:
                     continue
                 
                 ti_score = ti_score_lst[0]
@@ -95,7 +98,6 @@ def get_TS_np(features):
                     dim2_idx = dim2_idx + 1
                     
                 run_scores.append(ti_score)
-                #score = 1 if ti_score < 0.33 else 3 if ti_score > 0.66 else 2
                         
                 dim1_idx = dim1_idx + 1
                 
@@ -109,7 +111,7 @@ def get_TS_np(features):
 
 (TS_np, scores) = get_TS_np(features)
 
-print(TS_np.shape) # 180 -> (640, 45000, 15)    60 ->
+print(TS_np.shape) # 180 -> (631, 45000, 15)    60 -> (1768, 15000, 15)
 print(len(scores))
 
 # Reshape the 3D array to 2D

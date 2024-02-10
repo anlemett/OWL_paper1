@@ -15,8 +15,8 @@ print("reading ET data")
 temp_et_np = np.loadtxt(full_filename, delimiter=" ")
 
 # Reshape the 2D array back to its original 3D shape
-# (640, 45000, 15)
-temp_et_np = temp_et_np.reshape((640, 45000, 15))
+# (631, 45000, 15)
+temp_et_np = temp_et_np.reshape((631, 45000, 15))
 
 print(temp_et_np.shape)
 
