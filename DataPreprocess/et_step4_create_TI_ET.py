@@ -14,7 +14,7 @@ ET_DIR = os.path.join(DATA_DIR, "EyeTracking3")
 CH_DIR = os.path.join(DATA_DIR, "CH1")
 OUTPUT_DIR = os.path.join(DATA_DIR, "EyeTracking4")
 
-TIME_INTERVAL_DURATION = 60  #sec
+TIME_INTERVAL_DURATION = 180  #sec
 
 filenames = [["D1r1_MO", "D1r2_MO", "D1r3_MO"],
              ["D1r4_EI", "D1r5_EI", "D1r6_EI"],
@@ -35,6 +35,8 @@ filenames = [["D1r1_MO", "D1r2_MO", "D1r3_MO"],
              ["D9r1_RE", "D9r2_RE", "D9r3_RE"],
              ["D9r4_SV", "D9r5_SV", "D9r6_SV"]
              ]
+
+#filenames = [["D3r1_KB", "D3r2_KB", "D3r3_KB"]]
 
 features = ['Saccade', 'Fixation',
             'LeftPupilDiameter', 'RightPupilDiameter',
@@ -62,6 +64,9 @@ for atco in filenames:
         print(filename)
         full_filename = os.path.join(ET_DIR, 'ET_' + filename +  ".csv")
         df = pd.read_csv(full_filename, sep=' ')
+        
+        #nan_count = df.isna().sum()
+        #print(nan_count)
         
         full_filename = os.path.join(CH_DIR, filename + ".csv")
         scores_df = pd.read_csv(full_filename, sep=' ')
@@ -99,6 +104,10 @@ for atco in filenames:
     #####################################
     
     TI_df = pd.concat([TI_df, atco_df], ignore_index=True)
+
+#print(TI_df.isnull().any().any())
+#nan_count = TI_df.isna().sum()
+#print(nan_count)
 
 full_filename = os.path.join(OUTPUT_DIR, "ET_all_" + str(TIME_INTERVAL_DURATION) + ".csv")
 TI_df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)

@@ -3,12 +3,9 @@ warnings.filterwarnings('ignore')
 
 import os
 import pandas as pd
-import numpy as np
 import math
 from statistics import mean, median
-import sys
-
-from sklearn import preprocessing
+#import sys
 
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
@@ -92,4 +89,3 @@ for atco in filenames:
         
 full_filename = os.path.join(OUTPUT_DIR, "ML_EEG_" + str (TIME_INTERVAL_DURATION) + ".csv")
 ML_df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)
-

@@ -26,10 +26,9 @@ features = ['Saccade', 'Fixation',
             'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
             'HeadHeading', 'HeadPitch',	'HeadRoll']
 
-
 ATCOs = ['MO', 'EI', 'KV', 'UO', 'KB', 'PF', 'AL', 'IH', 'RI',
          'JO', 'AE', 'HC', 'LS', 'ML', 'AP', 'AK', 'RE', 'SV']
-         
+
 def get_TS_np(features):
     
     window_size = 250 * TIME_INTERVAL_DURATION
@@ -48,6 +47,11 @@ def get_TS_np(features):
     print("Reading Eye Tracking data")
     full_filename = os.path.join(ET_DIR, "ET_all_" + str(TIME_INTERVAL_DURATION) + ".csv")
     et_df = pd.read_csv(full_filename, sep=' ')
+
+    #print(et_df.isnull().any().any())
+    #The output shows the number of NaN values in each column of the data frame
+    #nan_count = et_df.isna().sum()
+    #print(nan_count)
 
     print("Reading EEG data")
     full_filename = os.path.join(EEG_DIR, "EEG_all_" + str(TIME_INTERVAL_DURATION) + ".csv")
@@ -110,6 +114,8 @@ def get_TS_np(features):
     return (TS_np, all_scores)
 
 (TS_np, scores) = get_TS_np(features)
+
+#print(np.isnan(TS_np).any())
 
 print(TS_np.shape) # 180 -> (631, 45000, 15)    60 -> (1768, 15000, 15)
 print(len(scores))

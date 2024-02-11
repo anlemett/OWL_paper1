@@ -24,7 +24,11 @@ def main():
 
     # Load the 2D array from the CSV file
     TS_np = np.loadtxt(full_filename, delimiter=" ")
-
+    
+    #print(np.isnan(TS_np).any())
+    #nan_count = np.count_nonzero(np.isnan(TS_np))
+    #print(nan_count)
+    
     # Reshape the 2D array back to its original 3D shape
     # (number_of_timeintervals, TIME_INTERVAL_DURATION*250, number_of_features)
     # 180 -> (631, 45000, 15), 60 -> (1768, 15000, 15)
@@ -54,14 +58,13 @@ def main():
     print(scores)
     
     if BINARY:
-        #scores = [1 if score < 0.5 else 2 for score in scores]
         #Split into 3 bins by percentile
         eeg_series = pd.Series(scores)
-        th = eeg_series.quantile(.93)
+        #th = eeg_series.quantile(.93)
+        th = eeg_series.quantile(.5)
         scores = [1 if score < th else 2 for score in scores]
 
     else:
-        #scores = [1 if score < 0.33 else 3 if score > 0.66 else 2 for score in scores]
         #Split into 3 bins by percentile
         eeg_series = pd.Series(scores)
         (th1, th2) = eeg_series.quantile([.52, .93])
@@ -71,8 +74,7 @@ def main():
     
     number_of_classes = len(set(scores))
     print(f"Number of classes : {number_of_classes}")
-    #sys.exit(0)
-
+ 
     ###########################################################################
     scores, weight_dict = weight_classes(scores)
 
@@ -83,13 +85,16 @@ def main():
         TS_np, scores, test_size=0.1, random_state=0, shuffle=False
         )
 
+    #print(np.any(np.isnan(test_X)))
+    #print(np.any(np.isnan(test_Y)))
+    
     print(
         f"Length of train_X : {len(train_X)}\nLength of test_X : {len(test_X)}\nLength of train_Y : {len(train_Y)}\nLength of test_Y : {len(test_Y)}"
         )
 
     ###########################################################################
     batch_size = 8
-    epoch_num = 10
+    epoch_num = 30
 
     (ac, f1, conv_model_history) = train_and_evaluate(train_X, train_Y, test_X, test_Y, weight_dict, batch_size, epoch_num) 
     return conv_model_history

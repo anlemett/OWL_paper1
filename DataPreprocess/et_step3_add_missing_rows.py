@@ -23,7 +23,7 @@ column_names = ['UnixTimestamp'] + ['SamplePerSecond'] + metrics_list
 
 filenames = ["D1r1_MO", "D1r2_MO", "D1r3_MO",
              "D1r4_EI", "D1r5_EI", "D1r6_EI",
-             "D2r1_KV", "D2r3_KV",
+             "D2r1_KV", "D2r2_KV",
              "D2r4_UO", "D2r5_UO", "D2r6_UO",
              "D3r1_KB", "D3r2_KB", "D3r3_KB",
              "D3r4_PF", "D3r5_PF", "D3r6_PF",
@@ -42,7 +42,7 @@ filenames = ["D1r1_MO", "D1r2_MO", "D1r3_MO",
              ]
 
 # for testing
-#filenames = ["D2r3_KV"]
+#filenames = ["D3r1_KB", "D3r2_KB", "D3r3_KB"]
 
 for filename in filenames:
     full_filename = os.path.join(INPUT_DIR, "ET_" + filename +  ".csv")
@@ -50,9 +50,8 @@ for filename in filenames:
         
     df = df[df['SamplePerSecond']<=250]
     
-    first_timestamp = df['UnixTimestamp'].loc[0]
-    last_timestamp = df['UnixTimestamp'].loc[len(df.index)-1]
-    
+    first_timestamp = df['UnixTimestamp'].iloc[0]
+    last_timestamp = df['UnixTimestamp'].tolist()[-1]
     
     new_df = df.copy()
     
@@ -97,12 +96,19 @@ for filename in filenames:
                 df_to_add[metric] = metric_values_lst
             
             new_df = pd.concat([new_df, df_to_add])
-            
 
-    #fill the null rows with the median of respective columns
-    new_df = new_df.fillna(new_df.median())
-    
     new_df.sort_values(['UnixTimestamp', 'SamplePerSecond'], ascending=[True, True], inplace=True)
+    new_df.reset_index(drop=True, inplace=True)
+    
+    # Float values: fill NaNs with linear interpolation of respective columns
+    new_df.interpolate(method='linear', limit_direction='both', axis=0, inplace=True)
+    #fill the null rows with the median of respective columns
+    #new_df = new_df.fillna(new_df.median())
+    
+    # Integer values (Saccade and Fixation): propagate last valid observation
+    # forward to next valid
+    new_df = new_df.fillna(method='ffill')
+    #new_df = new_df.fillna(0) #integer values (Saccade and Fixation)
     
     number_of_timestamps = last_timestamp - first_timestamp + 1
     number_of_rows1 = number_of_timestamps*250
@@ -112,5 +118,10 @@ for filename in filenames:
     print(number_of_rows1)
     print(number_of_rows2)
     
+    #print(new_df.isnull().any().any())
+    #nan_count = new_df.isna().sum()
+    #print(nan_count)
+    
     full_filename = os.path.join(OUTPUT_DIR, "ET_" + filename +  ".csv")
     new_df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)
+    

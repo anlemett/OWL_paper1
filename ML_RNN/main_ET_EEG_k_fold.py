@@ -52,14 +52,12 @@ def main():
     scores = list(scores_np)
 
     if BINARY:
-        #scores = [1 if score < 0.5 else 2 for score in scores]
         #Split into 3 bins by percentile
         eeg_series = pd.Series(scores)
         th = eeg_series.quantile(.93)
         scores = [1 if score < th else 2 for score in scores]
 
     else:
-        #scores = [1 if score < 0.33 else 3 if score > 0.66 else 2 for score in scores]
         #Split into 3 bins by percentile
         eeg_series = pd.Series(scores)
         (th1, th2) = eeg_series.quantile([.52, .93])
@@ -95,7 +93,7 @@ def main():
 
         #######################################################################
         batch_size = 8
-        epoch_num = 10
+        epoch_num = 30
 
         (cat_accuracy, f1_score, history) = train_and_evaluate(train_X, train_Y, test_X, test_Y, weight_dict, batch_size, epoch_num) 
         

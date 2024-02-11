@@ -5,6 +5,8 @@ import os
 
 import pandas as pd
 
+#TODO: cut using timestamps from CH files (from step 4)
+
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
 INPUT_DIR = os.path.join(DATA_DIR, "EyeTrackingRaw")
