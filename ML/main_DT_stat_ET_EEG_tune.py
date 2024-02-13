@@ -11,7 +11,7 @@ from sklearn import model_selection
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.tree import DecisionTreeClassifier
 
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
@@ -43,6 +43,38 @@ def weight_classes(scores):
     return weight_dict
 
 
+def featurize_data(x_data):
+    """
+    Convert 3D time series to 2D time series
+
+    :param x_data: time series of shape
+    (number_of_timeintervals, number_of_timestamps, number_of_features)
+    where number_of_timestamps == TIME_INTERVAL_DURATION*250
+
+    :return: featurized time series of shape
+    (number_of_timeintervals, number_of_new_features)
+    where number_of_new_features = 5*number_of_features
+    """
+    print("Input shape before feature union:", x_data.shape)
+
+    mean = np.mean(x_data, axis=-2)
+    std = np.std(x_data, axis=-2)
+    median = np.median(x_data, axis=-2)
+    min = np.min(x_data, axis=-2)
+    max = np.max(x_data, axis=-2)
+
+    featurized_data = np.concatenate([
+        mean,
+        std,
+        median,
+        min,
+        max,
+    ], axis=-1)
+
+    print("Shape after feature union, before classification:", featurized_data.shape)
+    return featurized_data
+
+
 def main():
     
     full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__ET.csv")
@@ -51,6 +83,18 @@ def main():
     # Load the 2D array from the CSV file
     TS_np = np.loadtxt(full_filename, delimiter=" ")
     
+    #print(np.isnan(TS_np).any())
+    #nan_count = np.count_nonzero(np.isnan(TS_np))
+    #print(nan_count)
+    
+    # Reshape the 2D array back to its original 3D shape
+    # (number_of_timeintervals, TIME_INTERVAL_DURATION*250, number_of_features)
+    # 180 -> (631, 45000, 15), 60 -> (1768, 15000, 15)
+    if TIME_INTERVAL_DURATION == 180: 
+        TS_np = TS_np.reshape((631, 45000, 15))
+    else: # 60
+        TS_np = TS_np.reshape((1768, 15000, 15))
+
     full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
 
     scores_np = np.loadtxt(full_filename, delimiter=" ")
@@ -105,14 +149,17 @@ def main():
         )
 
     ################################# Fit #####################################
+    X_train_featurized = featurize_data(X_train)
 
     classifier = DecisionTreeClassifier(class_weight=weight_dict)
 
-    classifier.fit(X_train, y_train)
+    classifier.fit(X_train_featurized, y_train)
     
     ############################## Predict ####################################
 
-    y_pred = classifier.predict(X_test)
+    X_test_featurized = featurize_data(X_test)
+
+    y_pred = classifier.predict(X_test_featurized)
     print("Shape at output after classification:", y_pred.shape)
     
     ############################ Evaluate #####################################
@@ -131,7 +178,38 @@ def main():
     print("Precision: ", precision)
     print("Recall: ", recall)
     print("F1-score:", f1)
+    
+    
+    features = ['Saccade', 'Fixation',
+                'LeftPupilDiameter', 'RightPupilDiameter',
+                'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
+                'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
+                'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
+                'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
+                'HeadHeading', 'HeadPitch',	'HeadRoll']
+    
+    # Create a series containing feature importances from the model
+    new_feature_importances = pd.Series(classifier.feature_importances_).sort_values(ascending=False)
+                   
+    new_feature_importances_lst = new_feature_importances.tolist()
+    feature_importances_lst = []
+    for i in range(0, len(features)):
+        feature_stats = new_feature_importances_lst[i*5:i*5+4]
+        feature_importances_lst.append(sum(feature_stats))
+    feature_importances = pd.Series(feature_importances_lst, index=features).sort_values(ascending=False)
+        
+    # Plot a simple bar chart
+    plt.rcParams["figure.autolayout"] = True
+    spacing = 0.100
 
+    fig = plt.figure()
+    fig.subplots_adjust(bottom=spacing)
+    
+    feature_importances.plot.bar(figsize=(20, 15), fontsize=22);
+    full_filename = os.path.join(FIG_DIR, "feature_importances.png")
+    plt.savefig(full_filename)
+
+    
 start_time = time.time()
 
 main()
