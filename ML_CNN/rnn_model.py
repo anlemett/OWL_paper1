@@ -13,7 +13,7 @@ from sklearn import preprocessing
 #to make the result reproducable
 keras.utils.set_random_seed(0)
 
-BINARY = True
+BINARY = False
 
 TIME_INTERVAL_DURATION = 60  #sec
 NUMBER_OF_FEATURES = 15
