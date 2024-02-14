@@ -4,7 +4,6 @@ warnings.filterwarnings('ignore')
 import time
 import os
 import numpy as np
-import pandas as pd
 from statistics import mean
 #import sys
 
@@ -18,7 +17,6 @@ ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
 BINARY = True
-TIME_INTERVAL_DURATION = 60
 
 np.random.seed(0)
 

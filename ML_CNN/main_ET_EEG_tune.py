@@ -2,6 +2,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 #import sys #exit
+import time
 import os
 import numpy as np
 import pandas as pd
@@ -35,7 +36,7 @@ def main():
     if TIME_INTERVAL_DURATION == 180: 
         TS_np = TS_np.reshape((631, 45000, 15))
     else: # 60
-        TS_np = TS_np.reshape((1768, 15000, 15))
+        TS_np = TS_np.reshape((1731, 15000, 19)) #(1731, 15000, 19)
 
     full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
 
@@ -100,8 +101,13 @@ def main():
     (ac, f1, conv_model_history) = train_and_evaluate(train_X, train_Y, test_X, test_Y, weight_dict, batch_size, epoch_num) 
     return conv_model_history
 
+
+start_time = time.time()
+
 conv_model_history = main()
         
+elapsed_time = time.time() - start_time
+print(f"Elapsed time: {elapsed_time:.3f} seconds")
 
 ###############################################################################
 import matplotlib.pyplot as plt

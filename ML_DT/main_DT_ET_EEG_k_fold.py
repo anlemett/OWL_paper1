@@ -73,8 +73,8 @@ def main():
     if BINARY:
         #Split into 2 bins by percentile
         eeg_series = pd.Series(scores)
-        #th = eeg_series.quantile(.5)
-        th = eeg_series.quantile(.93)
+        th = eeg_series.quantile(.5)
+        #th = eeg_series.quantile(.93)
         scores = [1 if score < th else 2 for score in scores]
 
     else:

@@ -1,6 +1,7 @@
 import warnings
 warnings.filterwarnings('ignore')
 
+import time
 import os
 import numpy as np
 import pandas as pd
@@ -30,7 +31,7 @@ def main():
     if TIME_INTERVAL_DURATION == 180: 
         TS_np = TS_np.reshape((631, 45000, 15))
     else: # 60
-        TS_np = TS_np.reshape((1768, 15000, 15))
+        TS_np = TS_np.reshape((1731, 15000, 19)) #(1731, 15000, 19)
 
     full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
 
@@ -111,6 +112,9 @@ def main():
     print(mean(acc_per_fold))
     print(mean(f1_per_fold))
 
+start_time = time.time()
 
 main()
-       
+  
+elapsed_time = time.time() - start_time
+print(f"Elapsed time: {elapsed_time:.3f} seconds")

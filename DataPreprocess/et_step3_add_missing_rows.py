@@ -42,7 +42,7 @@ filenames = ["D1r1_MO", "D1r2_MO", "D1r3_MO",
              ]
 
 # for testing
-#filenames = ["D3r1_KB", "D3r2_KB", "D3r3_KB"]
+filenames = ["D9r4_SV"]
 
 for filename in filenames:
     full_filename = os.path.join(INPUT_DIR, "ET_" + filename +  ".csv")
@@ -80,12 +80,12 @@ for filename in filenames:
         number_of_samples = len(ts_df.index)
         
         if number_of_samples < 250:
-            print(filename + ": adding rows") 
+            #print(filename + ": adding rows")
             
             num_to_add = 250 - number_of_samples
             # add num_to_add rows
             timestamp_lst = [ts]*num_to_add
-            sample_per_second_lst = range(number_of_samples + 1,251)
+            sample_per_second_lst = range(number_of_samples + 1, 251)
             metric_values_lst = [None]*num_to_add
             
             df_to_add = pd.DataFrame()
@@ -122,6 +122,7 @@ for filename in filenames:
     #nan_count = new_df.isna().sum()
     #print(nan_count)
     
+    print(len(new_df.index))
     full_filename = os.path.join(OUTPUT_DIR, "ET_" + filename +  ".csv")
     new_df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)
     

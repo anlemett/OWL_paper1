@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import math
 
-import sys
+#import sys
 
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
@@ -15,10 +15,12 @@ EEG_DIR = os.path.join(DATA_DIR, "EEG4")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 
 
-TIME_INTERVAL_DURATION = 180
+TIME_INTERVAL_DURATION = 60
 WINDOW_SIZE = 250 * TIME_INTERVAL_DURATION
 
-features = ['Saccade', 'Fixation',
+features = ['SaccadesNumber', 'SaccadesDuration',
+            'FixationNumber', 'FixationDuration',
+            'Saccade', 'Fixation',
             'LeftPupilDiameter', 'RightPupilDiameter',
             'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
             'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
@@ -117,7 +119,7 @@ def get_TS_np(features):
 
 #print(np.isnan(TS_np).any())
 
-print(TS_np.shape) # 180 -> (631, 45000, 15)    60 -> (1768, 15000, 15)
+print(TS_np.shape) # 180 -> (631, 45000, 15)    60 -> (1731, 15000, 19)
 print(len(scores))
 
 # Reshape the 3D array to 2D

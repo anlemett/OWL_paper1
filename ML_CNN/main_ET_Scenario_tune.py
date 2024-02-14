@@ -3,6 +3,7 @@ warnings.filterwarnings('ignore')
 
 #import sys #exit
 
+import time
 import os
 import numpy as np
 
@@ -81,9 +82,13 @@ def main():
     return conv_model_history
             
 
+start_time = time.time()
+
 conv_model_history = main()
         
- 
+elapsed_time = time.time() - start_time
+print(f"Elapsed time: {elapsed_time:.3f} seconds")
+
 ###############################################################################
 import matplotlib.pyplot as plt
 from tensorflow import keras

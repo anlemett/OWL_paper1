@@ -4,7 +4,6 @@ warnings.filterwarnings('ignore')
 import time
 import os
 import numpy as np
-import pandas as pd
 #import sys
 
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
@@ -20,7 +19,6 @@ ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
 BINARY = False
-TIME_INTERVAL_DURATION = 60
 
 np.random.seed(0)
 

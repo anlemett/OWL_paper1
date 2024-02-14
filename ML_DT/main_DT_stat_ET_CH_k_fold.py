@@ -20,7 +20,6 @@ ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
 BINARY = False
-TIME_INTERVAL_DURATION = 60
 
 np.random.seed(0)
 
@@ -110,9 +109,9 @@ def main():
     #print(scores)
     
     if BINARY:
-        scores = [1 if score < 3 else 2 for score in scores]
+        scores = [1 if score < 4 else 2 for score in scores]
     else:
-        scores = [1 if score < 2 else 3 if score > 2 else 2 for score in scores]
+        scores = [1 if score < 2 else 3 if score > 3 else 2 for score in scores]
 
     #print(scores)
        
@@ -145,7 +144,10 @@ def main():
 
         ################################# Fit #####################################
 
-        classifier = DecisionTreeClassifier(class_weight=weight_dict)
+        classifier = DecisionTreeClassifier(
+            class_weight=weight_dict,
+            max_depth=9
+            )
 
         classifier.fit(X_train_featurized, y_train)
     
@@ -204,7 +206,7 @@ def main():
     
         feature_importances.plot.bar(figsize=(20, 15), fontsize=22);
         full_filename = os.path.join(FIG_DIR, "fold" + str(fold_no) + ".png")
-        plt.savefig(full_filename)
+        #plt.savefig(full_filename)
         
         # Increase fold number
         fold_no = fold_no + 1

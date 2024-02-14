@@ -42,7 +42,7 @@ filenames = ["D1r1_MO", "D1r2_MO", "D1r3_MO",
              "D9r4_SV", "D9r5_SV", "D9r6_SV"
              ]
 #for testing
-#filenames = ["D2r3_KV"]
+filenames = ["D1r1_MO"]
 
 for filename in filenames:
     full_filename = os.path.join(INPUT_DIR, "ET_" + filename +  ".csv")
@@ -67,6 +67,8 @@ for filename in filenames:
 
     columns = ['UnixTimestamp'] + ['SamplePerSecond'] + metrics_list
     df = df[columns]
+    
+    print(len(df.index))
 
     full_filename = os.path.join(OUTPUT_DIR, "ET_" + filename +  ".csv")
     df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)

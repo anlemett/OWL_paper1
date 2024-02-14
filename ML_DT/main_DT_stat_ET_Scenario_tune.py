@@ -111,8 +111,8 @@ def main():
     #print(scores)
     
     if BINARY:
-        scores = [1 if score < 2 else 2 for score in scores]
-        #scores = [1 if score < 3 else 2 for score in scores]
+        #scores = [1 if score < 2 else 2 for score in scores]
+        scores = [1 if score < 3 else 2 for score in scores]
 
     #print(scores)
        
@@ -192,7 +192,7 @@ def main():
     
     feature_importances.plot.bar(figsize=(20, 15), fontsize=22);
     full_filename = os.path.join(FIG_DIR, "feature_importances.png")
-    plt.savefig(full_filename)
+    #plt.savefig(full_filename)
 
     
 start_time = time.time()

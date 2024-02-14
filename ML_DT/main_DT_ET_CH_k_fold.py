@@ -69,7 +69,7 @@ def main():
     #print(scores)
     
     if BINARY:
-        scores = [1 if score < 3 else 2 for score in scores]
+        scores = [1 if score < 4 else 2 for score in scores]
     else:
         scores = [1 if score < 2 else 3 if score > 2 else 2 for score in scores]
 

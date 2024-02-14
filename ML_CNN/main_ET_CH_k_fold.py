@@ -1,6 +1,7 @@
 import warnings
 warnings.filterwarnings('ignore')
 
+import time
 import os
 import numpy as np
 from statistics import mean
@@ -96,5 +97,9 @@ def main():
     print(mean(acc_per_fold))
     print(mean(f1_per_fold))
 
+start_time = time.time()
+
 main()
-        
+
+elapsed_time = time.time() - start_time
+print(f"Elapsed time: {elapsed_time:.3f} seconds")

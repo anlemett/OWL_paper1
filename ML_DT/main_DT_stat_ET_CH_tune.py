@@ -7,9 +7,10 @@ import numpy as np
 import pandas as pd
 #import sys
 
-from sklearn import model_selection
+from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.tree import DecisionTreeClassifier
+from scipy.stats import randint
 
 import matplotlib.pyplot as plt
 
@@ -121,7 +122,7 @@ def main():
     weight_dict = weight_classes(scores)
         
     # Spit the data into train and test
-    X_train, X_test, y_train, y_test = model_selection.train_test_split(
+    X_train, X_test, y_train, y_test = train_test_split(
         TS_np, scores, test_size=0.1, random_state=0, shuffle=False
         )
     
@@ -137,13 +138,33 @@ def main():
 
     classifier = DecisionTreeClassifier(class_weight=weight_dict)
 
-    classifier.fit(X_train_featurized, y_train)
+    
+    param_dist = {'max_depth': randint(1,20)}
+    
+    # Use random search to find the best hyperparameters
+    rand_search = RandomizedSearchCV(classifier, 
+                                 param_distributions = param_dist, 
+                                 n_iter=5, 
+                                 cv=5)
+
+    # Fit the random search object to the data
+    rand_search.fit(X_train_featurized, y_train)   
+
+    #classifier.fit(X_train_featurized, y_train)
+    
+    # Create a variable for the best model
+    best_dt = rand_search.best_estimator_
+
+    # Print the best hyperparameters
+    print('Best hyperparameters:',  rand_search.best_params_)
+    #{'max_depth': 9}
     
     ############################## Predict ####################################
 
     X_test_featurized = featurize_data(X_test)
 
-    y_pred = classifier.predict(X_test_featurized)
+    #y_pred = classifier.predict(X_test_featurized)
+    y_pred = best_dt.predict(X_test_featurized)
     print("Shape at output after classification:", y_pred.shape)
     
     ############################ Evaluate #####################################
@@ -163,7 +184,7 @@ def main():
     print("Recall: ", recall)
     print("F1-score:", f1)
     
-    
+    '''
     features = ['Saccade', 'Fixation',
                 'LeftPupilDiameter', 'RightPupilDiameter',
                 'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
@@ -192,7 +213,7 @@ def main():
     feature_importances.plot.bar(figsize=(20, 15), fontsize=22);
     full_filename = os.path.join(FIG_DIR, "feature_importances.png")
     plt.savefig(full_filename)
-
+    '''
     
 start_time = time.time()
 

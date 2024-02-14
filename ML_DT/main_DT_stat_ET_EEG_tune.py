@@ -18,7 +18,7 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = True
+BINARY = False
 TIME_INTERVAL_DURATION = 60
 
 np.random.seed(0)
@@ -93,7 +93,7 @@ def main():
     if TIME_INTERVAL_DURATION == 180: 
         TS_np = TS_np.reshape((631, 45000, 15))
     else: # 60
-        TS_np = TS_np.reshape((1768, 15000, 15))
+        TS_np = TS_np.reshape((1731, 15000, 19)) #(1731, 15000, 19)
 
     full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
 
@@ -207,7 +207,7 @@ def main():
     
     feature_importances.plot.bar(figsize=(20, 15), fontsize=22);
     full_filename = os.path.join(FIG_DIR, "feature_importances.png")
-    plt.savefig(full_filename)
+    #plt.savefig(full_filename)
 
     
 start_time = time.time()

@@ -2,7 +2,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 #import sys #exit
-
+import time
 import os
 import numpy as np
 
@@ -75,13 +75,18 @@ def main():
     
     ###########################################################################
     batch_size = 8
-    epoch_num = 5
+    epoch_num = 15
     cat_accuracy, f1_score, conv_model_history = train_and_evaluate(train_X, train_Y, test_X, test_Y, weight_dict, batch_size, epoch_num)
     
     return conv_model_history
 
+start_time = time.time()
 
 conv_model_history = main()
+
+elapsed_time = time.time() - start_time
+print(f"Elapsed time: {elapsed_time:.3f} seconds")
+
  
 ###############################################################################
 import matplotlib.pyplot as plt
