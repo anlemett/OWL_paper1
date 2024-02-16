@@ -20,8 +20,6 @@ ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
 BINARY = False
-EQUAL_PERCENTILES = True
-
 TIME_INTERVAL_DURATION = 60
 
 np.random.seed(0)
@@ -47,6 +45,8 @@ def weight_classes(scores):
 
 def featurize_data(x_data):
     """
+    Convert 3D time series to 2D time series
+
     :param x_data: time series of shape
     (number_of_timeintervals, number_of_timestamps, number_of_features)
     where number_of_timestamps == TIME_INTERVAL_DURATION*250
@@ -115,19 +115,15 @@ def main():
     if BINARY:
         #Split into 2 bins by percentile
         eeg_series = pd.Series(scores)
-        if EQUAL_PERCENTILES:
-            th = eeg_series.quantile(.5)
-        else:
-            th = eeg_series.quantile(.93)
+        th = eeg_series.quantile(.5)
+        #th = eeg_series.quantile(.93)
         scores = [1 if score < th else 2 for score in scores]
 
     else:
         #Split into 3 bins by percentile
         eeg_series = pd.Series(scores)
-        if EQUAL_PERCENTILES:
-            (th1, th2) = eeg_series.quantile([.33, .66])
-        else:
-            (th1, th2) = eeg_series.quantile([.52, .93])
+        (th1, th2) = eeg_series.quantile([.33, .66])
+        #(th1, th2) = eeg_series.quantile([.52, .93])
         scores = [1 if score < th1 else 3 if score > th2 else 2 for score in scores]
 
     print(scores)

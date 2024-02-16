@@ -11,14 +11,16 @@ from sklearn import model_selection
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.tree import DecisionTreeClassifier
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = False
+BINARY = True
+EQUAL_PERCENTILES = False
+
 TIME_INTERVAL_DURATION = 60
 
 np.random.seed(0)
@@ -45,13 +47,11 @@ def weight_classes(scores):
 
 def featurize_data(x_data):
     """
-    Convert 3D time series to 2D time series
-
-    :param x_data: time series of shape
+    :param x_data: numpy array of shape
     (number_of_timeintervals, number_of_timestamps, number_of_features)
     where number_of_timestamps == TIME_INTERVAL_DURATION*250
 
-    :return: featurized time series of shape
+    :return: featurized numpy array of shape
     (number_of_timeintervals, number_of_new_features)
     where number_of_new_features = 5*number_of_features
     """
@@ -77,7 +77,9 @@ def featurize_data(x_data):
 
 def main():
     
-    full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__ET.csv")
+    #full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__ET.csv")
+    #full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "_ocular__ET.csv")
+    full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "_head__ET.csv")
     print("reading data")
 
     # Load the 2D array from the CSV file
@@ -89,13 +91,15 @@ def main():
     
     # Reshape the 2D array back to its original 3D shape
     # (number_of_timeintervals, TIME_INTERVAL_DURATION*250, number_of_features)
-    # 180 -> (631, 45000, 15), 60 -> (1768, 15000, 15)
+    # 60 -> (1731, 15000, 17)
     if TIME_INTERVAL_DURATION == 180: 
-        TS_np = TS_np.reshape((631, 45000, 15))
+        TS_np = TS_np.reshape((631, 45000, 15)) #old
     else: # 60
-        TS_np = TS_np.reshape((1731, 15000, 19)) #(1731, 15000, 19)
+        TS_np = TS_np.reshape((1731, 15000, 3)) #(1731, 15000, 17)
 
-    full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
+    #full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
+    full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "_ocular__EEG.csv")
+    full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "_head__EEG.csv")
 
     scores_np = np.loadtxt(full_filename, delimiter=" ")
 
@@ -113,23 +117,27 @@ def main():
 
     scores = list(scores_np)
     
-    print(scores)
+    #print(scores)
     
     if BINARY:
         #Split into 2 bins by percentile
         eeg_series = pd.Series(scores)
-        #th = eeg_series.quantile(.5)
-        th = eeg_series.quantile(.93)
+        if EQUAL_PERCENTILES:
+            th = eeg_series.quantile(.5)
+        else:
+            th = eeg_series.quantile(.93)
         scores = [1 if score < th else 2 for score in scores]
 
     else:
         #Split into 3 bins by percentile
         eeg_series = pd.Series(scores)
-        #(th1, th2) = eeg_series.quantile([.33, .66])
-        (th1, th2) = eeg_series.quantile([.52, .93])
+        if EQUAL_PERCENTILES:
+            (th1, th2) = eeg_series.quantile([.33, .66])
+        else:
+            (th1, th2) = eeg_series.quantile([.52, .93])
         scores = [1 if score < th1 else 3 if score > th2 else 2 for score in scores]
 
-    print(scores)
+    #print(scores)
        
     number_of_classes = len(set(scores))
     print(f"Number of classes : {number_of_classes}")
@@ -179,7 +187,7 @@ def main():
     print("Recall: ", recall)
     print("F1-score:", f1)
     
-    
+    '''
     features = ['Saccade', 'Fixation',
                 'LeftPupilDiameter', 'RightPupilDiameter',
                 'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
@@ -207,8 +215,8 @@ def main():
     
     feature_importances.plot.bar(figsize=(20, 15), fontsize=22);
     full_filename = os.path.join(FIG_DIR, "feature_importances.png")
-    #plt.savefig(full_filename)
-
+    plt.savefig(full_filename)
+    '''
     
 start_time = time.time()
 

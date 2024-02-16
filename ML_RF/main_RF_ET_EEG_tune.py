@@ -128,7 +128,7 @@ def main():
 
     # Print the best hyperparameters
     print('Best hyperparameters:',  rand_search.best_params_)
-    #{'max_depth': 15, 'n_estimators': 377}
+    #{'max_depth': 9, 'n_estimators': 267}
     
     ############################## Predict ####################################
 

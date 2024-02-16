@@ -10,7 +10,7 @@ from statistics import mean
 
 from sklearn import model_selection
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 import matplotlib.pyplot as plt
 
@@ -19,7 +19,7 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = False
+BINARY = True
 EQUAL_PERCENTILES = True
 
 TIME_INTERVAL_DURATION = 60
@@ -47,6 +47,8 @@ def weight_classes(scores):
 
 def featurize_data(x_data):
     """
+    Convert 3D time series to 2D time series
+
     :param x_data: time series of shape
     (number_of_timeintervals, number_of_timestamps, number_of_features)
     where number_of_timestamps == TIME_INTERVAL_DURATION*250
@@ -161,7 +163,7 @@ def main():
 
         ################################# Fit #####################################
 
-        classifier = DecisionTreeClassifier(class_weight=weight_dict)
+        classifier = RandomForestClassifier(class_weight=weight_dict)
 
         classifier.fit(X_train_featurized, y_train)
     

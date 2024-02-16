@@ -20,9 +20,6 @@ ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
 BINARY = False
-EQUAL_PERCENTILES = True
-
-TIME_INTERVAL_DURATION = 60
 
 np.random.seed(0)
 
@@ -47,6 +44,8 @@ def weight_classes(scores):
 
 def featurize_data(x_data):
     """
+    Convert 3D time series to 2D time series
+
     :param x_data: time series of shape
     (number_of_timeintervals, number_of_timestamps, number_of_features)
     where number_of_timestamps == TIME_INTERVAL_DURATION*250
@@ -77,24 +76,21 @@ def featurize_data(x_data):
 
 def main():
     
-    full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__ET.csv")
+    full_filename = os.path.join(ML_DIR, "ML_ET_CH__ET.csv")
     print("reading data")
 
     # Load the 2D array from the CSV file
     TS_np = np.loadtxt(full_filename, delimiter=" ")
-    
-    # Reshape the 2D array back to its original 3D shape
-    # (number_of_timeintervals, TIME_INTERVAL_DURATION*250, number_of_features)
-    # 180 -> (631, 45000, 15), 60 -> (1768, 15000, 15)
-    if TIME_INTERVAL_DURATION == 180: 
-        TS_np = TS_np.reshape((631, 45000, 15))
-    else: # 60
-        TS_np = TS_np.reshape((1768, 15000, 15))
 
-    
-    full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
+    # Reshape the 2D array back to its original 3D shape
+    # (number_of_timeintervals, 180*250, number_of_features)
+    # (667, 45000, 15)
+    TS_np = TS_np.reshape((667, 45000, 15))
+
+    full_filename = os.path.join(ML_DIR, "ML_ET_CH__CH.csv")
 
     scores_np = np.loadtxt(full_filename, delimiter=" ")
+
 
     ###########################################################################
     #Shuffle data
@@ -113,24 +109,11 @@ def main():
     #print(scores)
     
     if BINARY:
-        #Split into 2 bins by percentile
-        eeg_series = pd.Series(scores)
-        if EQUAL_PERCENTILES:
-            th = eeg_series.quantile(.5)
-        else:
-            th = eeg_series.quantile(.93)
-        scores = [1 if score < th else 2 for score in scores]
-
+        scores = [1 if score < 4 else 2 for score in scores]
     else:
-        #Split into 3 bins by percentile
-        eeg_series = pd.Series(scores)
-        if EQUAL_PERCENTILES:
-            (th1, th2) = eeg_series.quantile([.33, .66])
-        else:
-            (th1, th2) = eeg_series.quantile([.52, .93])
-        scores = [1 if score < th1 else 3 if score > th2 else 2 for score in scores]
+        scores = [1 if score < 2 else 3 if score > 3 else 2 for score in scores]
 
-    print(scores)
+    #print(scores)
        
     number_of_classes = len(set(scores))
     print(f"Number of classes : {number_of_classes}")
@@ -161,7 +144,10 @@ def main():
 
         ################################# Fit #####################################
 
-        classifier = DecisionTreeClassifier(class_weight=weight_dict)
+        classifier = DecisionTreeClassifier(
+            class_weight=weight_dict,
+            max_depth=9
+            )
 
         classifier.fit(X_train_featurized, y_train)
     
@@ -220,7 +206,7 @@ def main():
     
         feature_importances.plot.bar(figsize=(20, 15), fontsize=22);
         full_filename = os.path.join(FIG_DIR, "fold" + str(fold_no) + ".png")
-        plt.savefig(full_filename)
+        #plt.savefig(full_filename)
         
         # Increase fold number
         fold_no = fold_no + 1

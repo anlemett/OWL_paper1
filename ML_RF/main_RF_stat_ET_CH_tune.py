@@ -8,7 +8,7 @@ import numpy as np
 
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 from scipy.stats import randint
 
 #import matplotlib.pyplot as plt
@@ -18,7 +18,7 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = True
+BINARY = False
 
 TIME_INTERVAL_DURATION = 60
 
@@ -138,9 +138,9 @@ def main():
     ################################# Fit #####################################
     X_train_featurized = featurize_data(X_train)
 
-    classifier = DecisionTreeClassifier(class_weight=weight_dict)
+    classifier = RandomForestClassifier(class_weight=weight_dict)
 
-    
+    #TODO: add second parameter
     param_dist = {'max_depth': randint(1,20)}
     
     # Use random search to find the best hyperparameters
@@ -159,8 +159,8 @@ def main():
 
     # Print the best hyperparameters
     print('Best hyperparameters:',  rand_search.best_params_)
-    #TODO: check param for Binary and 3 classes
-    #{'max_depth': 19}
+    #Binary: {'max_depth': 19}
+    #3 classes: {'max_depth': 11}
     
     ############################## Predict ####################################
 
@@ -186,37 +186,7 @@ def main():
     print("Precision: ", precision)
     print("Recall: ", recall)
     print("F1-score:", f1)
-    
-    '''
-    features = ['Saccade', 'Fixation',
-                'LeftPupilDiameter', 'RightPupilDiameter',
-                'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
-                'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
-                'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
-                'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
-                'HeadHeading', 'HeadPitch',	'HeadRoll']
-    
-    # Create a series containing feature importances from the model
-    new_feature_importances = pd.Series(classifier.feature_importances_).sort_values(ascending=False)
-                   
-    new_feature_importances_lst = new_feature_importances.tolist()
-    feature_importances_lst = []
-    for i in range(0, len(features)):
-        feature_stats = new_feature_importances_lst[i*5:i*5+4]
-        feature_importances_lst.append(sum(feature_stats))
-    feature_importances = pd.Series(feature_importances_lst, index=features).sort_values(ascending=False)
-        
-    # Plot a simple bar chart
-    plt.rcParams["figure.autolayout"] = True
-    spacing = 0.100
 
-    fig = plt.figure()
-    fig.subplots_adjust(bottom=spacing)
-    
-    feature_importances.plot.bar(figsize=(20, 15), fontsize=22);
-    full_filename = os.path.join(FIG_DIR, "feature_importances.png")
-    plt.savefig(full_filename)
-    '''
     
 start_time = time.time()
 
