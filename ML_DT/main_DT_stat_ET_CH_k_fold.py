@@ -44,13 +44,11 @@ def weight_classes(scores):
 
 def featurize_data(x_data):
     """
-    Convert 3D time series to 2D time series
-
-    :param x_data: time series of shape
+    :param x_data: numpy array of shape
     (number_of_timeintervals, number_of_timestamps, number_of_features)
     where number_of_timestamps == TIME_INTERVAL_DURATION*250
 
-    :return: featurized time series of shape
+    :return: featurized numpy array of shape
     (number_of_timeintervals, number_of_new_features)
     where number_of_new_features = 5*number_of_features
     """

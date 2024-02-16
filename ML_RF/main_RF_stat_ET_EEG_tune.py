@@ -18,12 +18,31 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = False
+BINARY = True
 EQUAL_PERCENTILES = False
+
+#SELECTED_FEATURES = "ALL"
+#SELECTED_FEATURES = "OCULAR"
+#SELECTED_FEATURES = "HEAD"
+#SELECTED_FEATURES = "SACCADE"
+#SELECTED_FEATURES = "FIXATION"
+#SELECTED_FEATURES = "DIAMETER"
+#SELECTED_FEATURES = "BLINK"
+SELECTED_FEATURES = "DIAMETER_BLINK"
+
 
 TIME_INTERVAL_DURATION = 60
 
 np.random.seed(0)
+
+# features: ['SaccadesNumber', 'SaccadesDuration',
+#            'FixationNumber', 'FixationDuration',
+#            'LeftPupilDiameter', 'RightPupilDiameter',
+#            'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
+#            'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
+#            'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
+#            'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
+#            'HeadHeading', 'HeadPitch', 'HeadRoll']
 
 def weight_classes(scores):
     
@@ -47,11 +66,11 @@ def weight_classes(scores):
 
 def featurize_data(x_data):
     """
-    :param x_data: time series of shape
+    :param x_data: numpy array of shape
     (number_of_timeintervals, number_of_timestamps, number_of_features)
     where number_of_timestamps == TIME_INTERVAL_DURATION*250
 
-    :return: featurized time series of shape
+    :return: featurized numpy array of shape
     (number_of_timeintervals, number_of_new_features)
     where number_of_new_features = 5*number_of_features
     """
@@ -77,9 +96,7 @@ def featurize_data(x_data):
 
 def main():
     
-    #full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__ET.csv")
-    #full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "_ocular__ET.csv")
-    full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "_head__ET.csv")
+    full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__ET.csv")
     print("reading data")
 
     # Load the 2D array from the CSV file
@@ -95,13 +112,27 @@ def main():
     if TIME_INTERVAL_DURATION == 180: 
         TS_np = TS_np.reshape((631, 45000, 15)) # old
     else: # 60
-        TS_np = TS_np.reshape((1731, 15000, 3)) #(1731, 15000, 17)
+        TS_np = TS_np.reshape((1731, 15000, 17)) #(1731, 15000, 17)
 
-    #full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
-    #full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "_ocular__EEG.csv")
-    full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "_head__EEG.csv")
+    full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
 
     scores_np = np.loadtxt(full_filename, delimiter=" ")
+    
+    
+    if SELECTED_FEATURES == "OCULAR":
+        TS_np = TS_np [:,:,0:14]
+    elif SELECTED_FEATURES == "HEAD":
+        TS_np = TS_np [:,:,14:17]
+    elif SELECTED_FEATURES == "SACCADE":
+        TS_np = TS_np [:,:,0:2]
+    elif SELECTED_FEATURES == "FIXATION":
+        TS_np = TS_np [:,:,2:4]
+    elif SELECTED_FEATURES == "DIAMETER":
+        TS_np = TS_np [:,:,4:6]
+    elif SELECTED_FEATURES == "BLINK":
+        TS_np = TS_np [:,:,6:14]
+    elif SELECTED_FEATURES == "DIAMETER_BLINK":
+        TS_np = TS_np [:,:,4:14]
 
     ###########################################################################
     #Shuffle data

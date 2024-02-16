@@ -28,8 +28,6 @@ features = ['SaccadesNumber', 'SaccadesDuration',
             'HeadHeading', 'HeadPitch', 'HeadRoll'
             ]
 
-features = ['HeadHeading', 'HeadPitch', 'HeadRoll']
-
 ATCOs = ['MO', 'EI', 'KV', 'UO', 'KB', 'PF', 'AL', 'IH', 'RI',
          'JO', 'AE', 'HC', 'LS', 'ML', 'AP', 'AK', 'RE', 'SV']
 
@@ -52,16 +50,6 @@ def get_TS_np(features):
     full_filename = os.path.join(ET_DIR, "ET_all_" + str(TIME_INTERVAL_DURATION) + ".csv")
     et_df = pd.read_csv(full_filename, sep=' ')
     
-    et_df = et_df.drop('Saccade', axis=1)
-    et_df = et_df.drop('Fixation', axis=1)
-    
-    #et_df = et_df.drop('HeadHeading', axis=1)
-    #et_df = et_df.drop('HeadPitch', axis=1)
-    #et_df = et_df.drop('HeadRoll', axis=1)
-    
-    et_df = et_df[['ATCO', 'Run', 'timeInterval', 'UnixTimestamp',
-                   'SamplePerSecond', 'HeadHeading', 'HeadPitch', 'HeadRoll']]
-
     #print(et_df.isnull().any().any())
     #The output shows the number of NaN values in each column of the data frame
     #nan_count = et_df.isna().sum()
@@ -131,10 +119,7 @@ def get_TS_np(features):
 
 #print(np.isnan(TS_np).any())
 
-print(TS_np.shape) # 60 -> (1731, 15000, 19)
-
-# ocular 60 ->
-# head 60 -> 
+print(TS_np.shape) # 60 -> (1731, 15000, 17)
 
 print(len(scores))
 
@@ -142,15 +127,11 @@ print(len(scores))
 TS_np_reshaped = TS_np.reshape(TS_np.shape[0], -1)
 
 # Save the 2D array to a CSV file
-#full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__ET.csv")
-#full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "_ocular__ET.csv")
-full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "_head__ET.csv")
+full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__ET.csv")
 np.savetxt(full_filename, TS_np_reshaped, delimiter=" ")
 
 # Save scores to a CSV file
-#full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
-#full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "_ocular__EEG.csv")
-full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "_head__EEG.csv")
+full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
 np.savetxt(full_filename, np.asarray(scores) , delimiter=" ")
 
 

@@ -39,13 +39,23 @@ filenames = [["D1r1_MO", "D1r2_MO", "D1r3_MO"],
 
 #filenames = [["D6r4_HC"]]
 
-features = ['Saccade', 'Fixation',
-            'LeftPupilDiameter', 'RightPupilDiameter',
-            'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
-            'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
-            'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
-            'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
-            'HeadHeading', 'HeadPitch',	'HeadRoll']
+# Old features:
+#           ['Saccade', 'Fixation',
+#            'LeftPupilDiameter', 'RightPupilDiameter',
+#            'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
+#            'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
+#            'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
+#            'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
+#            'HeadHeading', 'HeadPitch', 'HeadRoll']
+
+new_features = ['SaccadesNumber', 'SaccadesDuration',
+                'FixationNumber', 'FixationDuration',
+                'LeftPupilDiameter', 'RightPupilDiameter',
+                'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
+                'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
+                'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
+                'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
+                'HeadHeading', 'HeadPitch', 'HeadRoll']
 
 
 def getTimeInterval(timestamp, ch_first_timestamp, ch_last_timestamp):
@@ -112,7 +122,7 @@ for atco in filenames:
             
             fixation_duration = len(ti_df[ti_df['Fixation']!=0].index)
             fixations = ti_df['Fixation'].tolist()
-            fixation_number = len(set(saccades))
+            fixation_number = len(set(fixations))
             
             SaccadesNumber.extend([saccades_number]*TIME_INTERVAL_DURATION*250)
             SaccadesDuration.extend([saccades_duration]*TIME_INTERVAL_DURATION*250)
@@ -124,9 +134,8 @@ for atco in filenames:
         df['FixationNumber'] = FixationNumber
         df['FixationDuration'] = FixationDuration
         
-
-        df.loc[df["Saccade"] > 0, "Saccade"] = 1
-        df.loc[df["Fixation"] > 0, "Fixation"] = 1
+        df = df.drop('Saccade', axis=1)
+        df = df.drop('Fixation', axis=1)
         
         row_num = len(df.index)
         df['ATCO'] = [filename[-2:]] * row_num
@@ -134,8 +143,7 @@ for atco in filenames:
         run = run + 1    
 
         columns = ['ATCO'] + ['Run'] + ['timeInterval'] + ['UnixTimestamp'] + \
-            ['SamplePerSecond'] + ['SaccadesNumber'] + ['SaccadesDuration'] + \
-            ['FixationNumber'] + ['FixationDuration'] + features
+            ['SamplePerSecond'] + new_features
         df = df[columns]
         
         atco_df = pd.concat([atco_df, df], ignore_index=True)
@@ -144,7 +152,7 @@ for atco in filenames:
     #scale the values
     scaler = preprocessing.MinMaxScaler()
 
-    for feature in features:
+    for feature in new_features:
         feature_lst = atco_df[feature].tolist()
         scaled_feature_lst = scaler.fit_transform(np.asarray(feature_lst).reshape(-1, 1))
         atco_df = atco_df.drop(feature, axis = 1)
@@ -156,6 +164,9 @@ for atco in filenames:
 #print(TI_df.isnull().any().any())
 #nan_count = TI_df.isna().sum()
 #print(nan_count)
+
+pd.set_option('display.max_columns', None)
+print(TI_df.head(1))
 
 full_filename = os.path.join(OUTPUT_DIR, "ET_all_" + str(TIME_INTERVAL_DURATION) + ".csv")
 TI_df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)
