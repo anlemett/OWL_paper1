@@ -5,7 +5,7 @@ import os
 import pandas as pd
 import numpy as np
 import math
-import sys
+#import sys
 
 from sklearn import preprocessing
 
@@ -15,7 +15,7 @@ ET_DIR = os.path.join(DATA_DIR, "EyeTracking3")
 CH_DIR = os.path.join(DATA_DIR, "CH1")
 OUTPUT_DIR = os.path.join(DATA_DIR, "EyeTracking4")
 
-TIME_INTERVAL_DURATION = 60  #sec
+TIME_INTERVAL_DURATION = 180  #sec
 
 filenames = [["D1r1_MO", "D1r2_MO", "D1r3_MO"],
              ["D1r4_EI", "D1r5_EI", "D1r6_EI"],

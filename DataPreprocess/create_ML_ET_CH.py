@@ -13,13 +13,17 @@ ML_DIR = os.path.join(DATA_DIR, "MLInput")
 
 WINDOW_SIZE = 250 * 180
 
-features = ['Saccade', 'Fixation',
+features = ['SaccadesNumber', 'SaccadesDuration',
+            'FixationNumber', 'FixationDuration',
             'LeftPupilDiameter', 'RightPupilDiameter',
             'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
             'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
             'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
             'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
-            'HeadHeading', 'HeadPitch',	'HeadRoll']
+            'HeadHeading', 'HeadPitch', 'HeadRoll'
+            ]
+
+features = ['HeadHeading', 'HeadPitch', 'HeadRoll']
 
 ATCOs = ['MO', 'EI', 'KV', 'UO', 'KB', 'PF', 'AL', 'IH', 'RI',
          'JO', 'AE', 'HC', 'LS', 'ML', 'AP', 'AK', 'RE', 'SV']
@@ -42,12 +46,20 @@ def get_TS_np(features):
     print("Reading Eye Tracking data")
     full_filename = os.path.join(ET_DIR, "ET_all_180.csv")
     et_df = pd.read_csv(full_filename, sep=' ')
+    
+    et_df = et_df.drop('Saccade', axis=1)
+    et_df = et_df.drop('Fixation', axis=1)
+    
+    #et_df = et_df.drop('HeadHeading', axis=1)
+    #et_df = et_df.drop('HeadPitch', axis=1)
+    #et_df = et_df.drop('HeadRoll', axis=1)
+    et_df = et_df[['ATCO', 'Run', 'timeInterval', 'UnixTimestamp',
+                   'SamplePerSecond', 'HeadHeading', 'HeadPitch', 'HeadRoll']]
 
     print("Reading CH data")
     full_filename = os.path.join(CH_DIR, "CH_all.csv")
     ch_df = pd.read_csv(full_filename, sep=' ')
-     
-       
+    
     dim1_idx = 0
 
     for atco in ATCOs:
@@ -101,16 +113,20 @@ def get_TS_np(features):
 
 (TS_np, scores) = get_TS_np(features)
 
-print(TS_np.shape) # (667, 45000, 15)
+print(TS_np.shape) # (667, 45000, 17)
 print(len(scores))
 
 # Reshape the 3D array to 2D
 TS_np_reshaped = TS_np.reshape(TS_np.shape[0], -1)
 
 # Save the 2D array to a CSV file
-full_filename = os.path.join(ML_DIR, "ML_ET_CH__ET.csv")
+#full_filename = os.path.join(ML_DIR, "ML_ET_CH__ET.csv")
+#full_filename = os.path.join(ML_DIR, "ML_ET_CH_ocular__ET.csv")
+full_filename = os.path.join(ML_DIR, "ML_ET_CH_head__ET.csv")
 np.savetxt(full_filename, TS_np_reshaped, delimiter=" ")
 
 # Save scores to a CSV file
-full_filename = os.path.join(ML_DIR, "ML_ET_CH__CH.csv")
+#full_filename = os.path.join(ML_DIR, "ML_ET_CH__CH.csv")
+#full_filename = os.path.join(ML_DIR, "ML_ET_CH_ocular__CH.csv")
+full_filename = os.path.join(ML_DIR, "ML_ET_CH_head__CH.csv")
 np.savetxt(full_filename, np.asarray(scores) , fmt='%i', delimiter=" ")
