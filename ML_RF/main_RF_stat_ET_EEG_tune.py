@@ -21,17 +21,35 @@ FIG_DIR = os.path.join(".", "Figures")
 BINARY = True
 EQUAL_PERCENTILES = False
 
-#SELECTED_FEATURES = "ALL"
+SELECTED_FEATURES = "ALL"
 #SELECTED_FEATURES = "OCULAR"
 #SELECTED_FEATURES = "HEAD"
 #SELECTED_FEATURES = "SACCADE"
 #SELECTED_FEATURES = "FIXATION"
 #SELECTED_FEATURES = "DIAMETER"
 #SELECTED_FEATURES = "BLINK"
-SELECTED_FEATURES = "DIAMETER_BLINK"
+#SELECTED_FEATURES = "DIAMETER_BLINK"
 
 
 TIME_INTERVAL_DURATION = 60
+
+features = ['SaccadesNumber', 'SaccadesDuration',
+            'FixationNumber', 'FixationDuration']
+
+old_features = [
+            'LeftPupilDiameter', 'RightPupilDiameter',
+            'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
+            'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
+            'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
+            'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
+            'HeadHeading', 'HeadPitch', 'HeadRoll']
+
+statistics = ['mean', 'std', 'min', 'max', 'median']
+
+for feature in old_features:
+    for stat in statistics:
+        new_feature = feature + '_' + stat
+        features.append(new_feature)
 
 np.random.seed(0)
 
@@ -83,15 +101,19 @@ def featurize_data(x_data):
     max = np.max(x_data, axis=-2)
 
     featurized_data = np.concatenate([
-        mean,
-        std,
-        median,
-        min,
-        max,
+        mean,    
+        std,     
+        min,     
+        max, 
+        median
     ], axis=-1)
 
-    print("Shape after feature union, before classification:", featurized_data.shape)
-    return featurized_data
+    saccades_data = featurized_data[:,4:6]
+    fixation_data = featurized_data[:,14:16]
+    rest_data = featurized_data[:,20:]
+    new_featurized_data = np.concatenate((saccades_data, fixation_data, rest_data), axis=1)
+    print("Shape after feature union, before classification:", new_featurized_data.shape)
+    return new_featurized_data
 
 
 def main():
@@ -189,17 +211,58 @@ def main():
 
     ################################# Fit #####################################
     X_train_featurized = featurize_data(X_train)
-
-    classifier = RandomForestClassifier(class_weight=weight_dict)
-
-    classifier.fit(X_train_featurized, y_train)
     
+    X_train_df = pd.DataFrame(X_train_featurized, columns = features)
+    
+    features3 = ['RightBlinkClosingSpeed_mean',
+                 'RightBlinkClosingSpeed_max',
+                 'LeftBlinkClosingSpeed_std']
+    
+    X_train_df3 = X_train_df[features3]
+    
+    rf = RandomForestClassifier(class_weight=weight_dict, max_depth=3)
+
+    rf.fit(X_train_df3, y_train)
+    
+    import pickle
+    # save the model to disk
+    filename = 'rf_binary.sav'
+    pickle.dump(rf, open(filename, 'wb')) 
+
+    # load the model from disk
+    #loaded_model = pickle.load(open(filename, 'rb'))
+        
     ############################## Predict ####################################
 
     X_test_featurized = featurize_data(X_test)
+    
+    X_test_df = pd.DataFrame(X_test_featurized, columns = features)
+    
+    X_test_df3 = X_test_df[features3]
 
-    y_pred = classifier.predict(X_test_featurized)
+    y_pred = rf.predict(X_test_df3)
     print("Shape at output after classification:", y_pred.shape)
+    
+    #print(y_pred)
+    #print(y_test)
+    
+    for i in range(0, len(y_pred)):
+        if y_pred[i] == 1:
+            if y_pred[i] == y_test[i]:
+                print("1")
+                print(i)
+                break # 0
+    class_low_sample = X_test_df3.iloc[i:i+1]
+    print(class_low_sample)
+    class_low_sample.to_csv("class_low_sample.csv", sep = ' ', header=True, index=False)
+    for i in range(0, len(y_pred)):
+        if y_pred[i] == 2:
+            if y_pred[i] == y_test[i]:
+                print("2") #56
+                print(i)
+                break
+    class_high_sample = X_test_df3.iloc[i:i+1]
+    class_high_sample.to_csv("class_high_sample.csv", sep = ' ', header=True, index=False)     
     
     ############################ Evaluate #####################################
     

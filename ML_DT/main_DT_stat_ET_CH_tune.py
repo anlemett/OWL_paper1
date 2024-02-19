@@ -18,7 +18,7 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = True
+BINARY = False
 
 TIME_INTERVAL_DURATION = 60
 
@@ -76,9 +76,7 @@ def featurize_data(x_data):
 
 def main():
     
-    #full_filename = os.path.join(ML_DIR, "ML_ET_CH__ET.csv")
-    #full_filename = os.path.join(ML_DIR, "ML_ET_CH_ocular__ET.csv")
-    full_filename = os.path.join(ML_DIR, "ML_ET_CH_head__ET.csv")
+    full_filename = os.path.join(ML_DIR, "ML_ET_CH__ET.csv")
     print("reading data")
 
     # Load the 2D array from the CSV file
@@ -87,11 +85,9 @@ def main():
     # Reshape the 2D array back to its original 3D shape
     # (number_of_timeintervals, 180*250, number_of_features)
     # (667, 45000, 17)
-    TS_np = TS_np.reshape((667, 45000, 3))
+    TS_np = TS_np.reshape((667, 45000, 17))
 
-    #full_filename = os.path.join(ML_DIR, "ML_ET_CH__CH.csv")
-    #full_filename = os.path.join(ML_DIR, "ML_ET_CH_ocular__CH.csv")
-    full_filename = os.path.join(ML_DIR, "ML_ET_CH_head__CH.csv")
+    full_filename = os.path.join(ML_DIR, "ML_ET_CH__CH.csv")
 
     scores_np = np.loadtxt(full_filename, delimiter=" ")
 

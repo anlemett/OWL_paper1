@@ -1,17 +1,19 @@
+#pip install selective
+#https://github.com/fidelity/selective
+
+from feature.selector import SelectionMethod, Selective, benchmark, calculate_statistics
+
 import warnings
 warnings.filterwarnings('ignore')
 
 import time
 import os
 import numpy as np
+import pandas as pd
 #import sys
 
-from sklearn.model_selection import RandomizedSearchCV, train_test_split
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.svm import SVC
-from scipy.stats import randint
+from sklearn.ensemble import RandomForestClassifier
 
-#import matplotlib.pyplot as plt
 
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
@@ -19,6 +21,26 @@ ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
 BINARY = True
+
+TIME_INTERVAL_DURATION = 60
+
+features = ['SaccadesNumber', 'SaccadesDuration',
+            'FixationNumber', 'FixationDuration']
+old_features = [
+            'LeftPupilDiameter', 'RightPupilDiameter',
+            'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
+            'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
+            'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
+            'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
+            'HeadHeading', 'HeadPitch', 'HeadRoll']
+
+statistics = ['mean', 'std', 'min', 'max', 'median']
+
+for feature in old_features:
+    for stat in statistics:
+        new_feature = feature + '_' + stat
+        features.append(new_feature)
+
 
 np.random.seed(0)
 
@@ -46,9 +68,9 @@ def featurize_data(x_data):
     """
     :param x_data: numpy array of shape
     (number_of_timeintervals, number_of_timestamps, number_of_features)
-    where number_of_timestamps == 180*250
+    where number_of_timestamps == TIME_INTERVAL_DURATION*250
 
-    :return: featurized numpy of shape
+    :return: featurized numpy array of shape
     (number_of_timeintervals, number_of_new_features)
     where number_of_new_features = 5*number_of_features
     """
@@ -61,15 +83,19 @@ def featurize_data(x_data):
     max = np.max(x_data, axis=-2)
 
     featurized_data = np.concatenate([
-        mean,
-        std,
-        median,
-        min,
-        max,
+        mean,    
+        std,     
+        min,     
+        max, 
+        median
     ], axis=-1)
 
-    print("Shape after feature union, before classification:", featurized_data.shape)
-    return featurized_data
+    saccades_data = featurized_data[:,4:6]
+    fixation_data = featurized_data[:,14:16]
+    rest_data = featurized_data[:,20:]
+    new_featurized_data = np.concatenate((saccades_data, fixation_data, rest_data), axis=1)
+    print("Shape after feature union, before classification:", new_featurized_data.shape)
+    return new_featurized_data
 
 
 def main():
@@ -84,7 +110,7 @@ def main():
     # (number_of_timeintervals, 180*250, number_of_features)
     # (667, 45000, 17)
     TS_np = TS_np.reshape((667, 45000, 17))
-
+    
     full_filename = os.path.join(ML_DIR, "ML_ET_CH__CH.csv")
 
     scores_np = np.loadtxt(full_filename, delimiter=" ")
@@ -107,6 +133,7 @@ def main():
     
     if BINARY:
         scores = [1 if score < 4 else 2 for score in scores]
+        #scores = [1 if score < 2 else 2 for score in scores]
     else:
         scores = [1 if score < 2 else 3 if score > 3 else 2 for score in scores]
 
@@ -117,50 +144,35 @@ def main():
     
     weight_dict = weight_classes(scores)
         
-    # Spit the data into train and test
-    X_train, X_test, y_train, y_test = train_test_split(
-        TS_np, scores, test_size=0.1, random_state=0, shuffle=False
-        )
+    TS_np = np.array(TS_np)
+    X = featurize_data(TS_np)
+    X_df = pd.DataFrame(X, columns = features)  
     
-    X_train = np.array(X_train)
-    X_test = np.array(X_test)
+    y = np.array(scores)
+    y = pd.Series(y)
+
+
+    ########################### Select features ###############################
+
+    selectors = {
+
+        # Non-linear tree-based methods
+        "random_forest5": SelectionMethod.TreeBased(num_features=5),
+
+    }
+    # Benchmark (sequential)
+    score_df, selected_df, runtime_df = benchmark(selectors, X_df, y,
+                                                  cv=5)
+    #print(score_df, "\n\n", selected_df, "\n\n", runtime_df)
+   
+    #selected_df = selected_df[selected_df['random_forest5']==1]
+    #print(selected_df)
+
+    # Get benchmark statistics by feature
+    stats_df = calculate_statistics(score_df, selected_df)
+    pd.set_option('display.max_columns', None)
+    print(stats_df)
     
-    print(
-        f"Length of train  X : {len(X_train)}\nLength of test X : {len(X_test)}\nLength of train Y : {len(y_train)}\nLength of test Y : {len(y_test)}"
-        )
-
-    ################################# Fit #####################################
-    X_train_featurized = featurize_data(X_train)
-
-    classifier = SVC(class_weight=weight_dict)
-
-    # Fit the random search object to the data
-    classifier.fit(X_train_featurized, y_train)
-        
-    ############################## Predict ####################################
-
-    X_test_featurized = featurize_data(X_test)
-
-    y_pred = classifier.predict(X_test_featurized)
-    print("Shape at output after classification:", y_pred.shape)
-    
-    ############################ Evaluate #####################################
-    
-    accuracy = accuracy_score(y_pred=y_pred, y_true=y_test)
-    
-    if BINARY:
-        precision = precision_score(y_pred=y_pred, y_true=y_test, average='binary')
-        recall = recall_score(y_pred=y_pred, y_true=y_test, average='binary')
-        f1 = f1_score(y_pred=y_pred, y_true=y_test, average='binary')
-    else:
-        f1 = f1_score(y_pred=y_pred, y_true=y_test, average='micro')
-        recall = recall_score(y_pred=y_pred, y_true=y_test, average='micro')
-        precision = precision_score(y_pred=y_pred, y_true=y_test, average='micro')
-    print("Accuracy:", accuracy)
-    print("Precision: ", precision)
-    print("Recall: ", recall)
-    print("F1-score:", f1)
-
     
 start_time = time.time()
 
@@ -168,4 +180,3 @@ main()
 
 elapsed_time = time.time() - start_time
 print(f"Elapsed time: {elapsed_time:.3f} seconds")
-    

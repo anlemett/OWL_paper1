@@ -1,3 +1,8 @@
+#pip install selective
+#https://github.com/fidelity/selective
+
+from feature.selector import SelectionMethod, Selective, benchmark, calculate_statistics
+
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -6,10 +11,6 @@ import os
 import numpy as np
 import pandas as pd
 #import sys
-
-from sklearn import model_selection
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.tree import DecisionTreeClassifier
 
 #import matplotlib.pyplot as plt
 
@@ -23,7 +24,34 @@ EQUAL_PERCENTILES = False
 
 TIME_INTERVAL_DURATION = 60
 
+features = ['SaccadesNumber', 'SaccadesDuration',
+            'FixationNumber', 'FixationDuration']
+
+old_features = [
+            'LeftPupilDiameter', 'RightPupilDiameter',
+            'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
+            'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
+            'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
+            'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
+            'HeadHeading', 'HeadPitch', 'HeadRoll']
+
+statistics = ['mean', 'std', 'min', 'max', 'median']
+
+for feature in old_features:
+    for stat in statistics:
+        new_feature = feature + '_' + stat
+        features.append(new_feature)
+
 np.random.seed(0)
+
+# old features: ['SaccadesNumber', 'SaccadesDuration',
+#              'FixationNumber', 'FixationDuration',
+#              'LeftPupilDiameter', 'RightPupilDiameter',
+#              'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
+#              'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
+#              'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
+#              'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
+#              'HeadHeading', 'HeadPitch', 'HeadRoll']
 
 def weight_classes(scores):
     
@@ -64,15 +92,19 @@ def featurize_data(x_data):
     max = np.max(x_data, axis=-2)
 
     featurized_data = np.concatenate([
-        mean,
-        std,
-        median,
-        min,
-        max,
+        mean,    
+        std,     
+        min,     
+        max, 
+        median
     ], axis=-1)
 
-    print("Shape after feature union, before classification:", featurized_data.shape)
-    return featurized_data
+    saccades_data = featurized_data[:,4:6]
+    fixation_data = featurized_data[:,14:16]
+    rest_data = featurized_data[:,20:]
+    new_featurized_data = np.concatenate((saccades_data, fixation_data, rest_data), axis=1)
+    print("Shape after feature union, before classification:", new_featurized_data.shape)
+    return new_featurized_data
 
 
 def main():
@@ -89,9 +121,9 @@ def main():
     
     # Reshape the 2D array back to its original 3D shape
     # (number_of_timeintervals, TIME_INTERVAL_DURATION*250, number_of_features)
-    # 60 -> (1731, 15000, 17)
+    # 180 -> (631, 45000, 15), 60 -> (1768, 15000, 15)
     if TIME_INTERVAL_DURATION == 180: 
-        TS_np = TS_np.reshape((631, 45000, 15)) #old
+        TS_np = TS_np.reshape((631, 45000, 15)) # old
     else: # 60
         TS_np = TS_np.reshape((1731, 15000, 17)) #(1731, 15000, 17)
 
@@ -140,79 +172,34 @@ def main():
     
     weight_dict = weight_classes(scores)
         
-    # Spit the data into train and test
-    X_train, X_test, y_train, y_test = model_selection.train_test_split(
-        TS_np, scores, test_size=0.1, random_state=0, shuffle=False
-        )
+    TS_np = np.array(TS_np)
+    X = featurize_data(TS_np)
+    X_df = pd.DataFrame(X, columns = features)  
     
-    X_train = np.array(X_train)
-    X_test = np.array(X_test)
-    
-    print(
-        f"Length of train  X : {len(X_train)}\nLength of test X : {len(X_test)}\nLength of train Y : {len(y_train)}\nLength of test Y : {len(y_test)}"
-        )
+    y = np.array(scores)
+    y = pd.Series(y)
 
-    ################################# Fit #####################################
-    X_train_featurized = featurize_data(X_train)
 
-    classifier = DecisionTreeClassifier(class_weight=weight_dict)
+    ########################### Select features ###############################
 
-    classifier.fit(X_train_featurized, y_train)
-    
-    ############################## Predict ####################################
+    selectors = {
 
-    X_test_featurized = featurize_data(X_test)
+        # Non-linear tree-based methods
+        "random_forest5": SelectionMethod.TreeBased(num_features=5),
 
-    y_pred = classifier.predict(X_test_featurized)
-    print("Shape at output after classification:", y_pred.shape)
-    
-    ############################ Evaluate #####################################
-    
-    accuracy = accuracy_score(y_pred=y_pred, y_true=y_test)
-    
-    if BINARY:
-        precision = precision_score(y_pred=y_pred, y_true=y_test, average='binary')
-        recall = recall_score(y_pred=y_pred, y_true=y_test, average='binary')
-        f1 = f1_score(y_pred=y_pred, y_true=y_test, average='binary')
-    else:
-        f1 = f1_score(y_pred=y_pred, y_true=y_test, average='micro')
-        recall = recall_score(y_pred=y_pred, y_true=y_test, average='micro')
-        precision = precision_score(y_pred=y_pred, y_true=y_test, average='micro')
-    print("Accuracy:", accuracy)
-    print("Precision: ", precision)
-    print("Recall: ", recall)
-    print("F1-score:", f1)
-    
-    '''
-    features = ['Saccade', 'Fixation',
-                'LeftPupilDiameter', 'RightPupilDiameter',
-                'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
-                'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
-                'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
-                'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
-                'HeadHeading', 'HeadPitch',	'HeadRoll']
-    
-    # Create a series containing feature importances from the model
-    new_feature_importances = pd.Series(classifier.feature_importances_).sort_values(ascending=False)
-                   
-    new_feature_importances_lst = new_feature_importances.tolist()
-    feature_importances_lst = []
-    for i in range(0, len(features)):
-        feature_stats = new_feature_importances_lst[i*5:i*5+4]
-        feature_importances_lst.append(sum(feature_stats))
-    feature_importances = pd.Series(feature_importances_lst, index=features).sort_values(ascending=False)
-        
-    # Plot a simple bar chart
-    plt.rcParams["figure.autolayout"] = True
-    spacing = 0.100
+    }
+    # Benchmark (sequential)
+    score_df, selected_df, runtime_df = benchmark(selectors, X_df, y,
+                                                  cv=5)
+    #print(score_df, "\n\n", selected_df, "\n\n", runtime_df)
+   
+    #selected_df = selected_df[selected_df['random_forest5']==1]
+    #print(selected_df)
 
-    fig = plt.figure()
-    fig.subplots_adjust(bottom=spacing)
-    
-    feature_importances.plot.bar(figsize=(20, 15), fontsize=22);
-    full_filename = os.path.join(FIG_DIR, "feature_importances.png")
-    plt.savefig(full_filename)
-    '''
+    # Get benchmark statistics by feature
+    stats_df = calculate_statistics(score_df, selected_df)
+    pd.set_option('display.max_columns', None)
+    print(stats_df)
     
 start_time = time.time()
 
@@ -220,4 +207,3 @@ main()
 
 elapsed_time = time.time() - start_time
 print(f"Elapsed time: {elapsed_time:.3f} seconds")
-    

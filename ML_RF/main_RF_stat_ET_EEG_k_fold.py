@@ -19,10 +19,28 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = True
-EQUAL_PERCENTILES = True
+BINARY = False
+EQUAL_PERCENTILES = False
 
 TIME_INTERVAL_DURATION = 60
+
+features = ['SaccadesNumber', 'SaccadesDuration',
+            'FixationNumber', 'FixationDuration']
+
+old_features = [
+            'LeftPupilDiameter', 'RightPupilDiameter',
+            'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
+            'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
+            'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
+            'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
+            'HeadHeading', 'HeadPitch', 'HeadRoll']
+
+statistics = ['mean', 'std', 'min', 'max', 'median']
+
+for feature in old_features:
+    for stat in statistics:
+        new_feature = feature + '_' + stat
+        features.append(new_feature)
 
 np.random.seed(0)
 
@@ -64,15 +82,19 @@ def featurize_data(x_data):
     max = np.max(x_data, axis=-2)
 
     featurized_data = np.concatenate([
-        mean,
-        std,
-        median,
-        min,
-        max,
+        mean,    
+        std,     
+        min,     
+        max, 
+        median
     ], axis=-1)
 
-    print("Shape after feature union, before classification:", featurized_data.shape)
-    return featurized_data
+    saccades_data = featurized_data[:,4:6]
+    fixation_data = featurized_data[:,14:16]
+    rest_data = featurized_data[:,20:]
+    new_featurized_data = np.concatenate((saccades_data, fixation_data, rest_data), axis=1)
+    print("Shape after feature union, before classification:", new_featurized_data.shape)
+    return new_featurized_data
 
 
 def main():
@@ -87,9 +109,9 @@ def main():
     # (number_of_timeintervals, TIME_INTERVAL_DURATION*250, number_of_features)
     # 180 -> (631, 45000, 15), 60 -> (1768, 15000, 15)
     if TIME_INTERVAL_DURATION == 180: 
-        TS_np = TS_np.reshape((631, 45000, 15))
+        TS_np = TS_np.reshape((631, 45000, 15)) #old
     else: # 60
-        TS_np = TS_np.reshape((1768, 15000, 15))
+        TS_np = TS_np.reshape((1731, 15000, 17))
 
     
     full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
@@ -158,7 +180,29 @@ def main():
         y_test = np.array(scores)[test_idx.astype(int)]
         
         X_train_featurized = featurize_data(X_train)
-
+        
+        X_train_df = pd.DataFrame(X_train_featurized, columns = features)
+        
+        X_train_df = X_train_df[['RightBlinkClosingSpeed_mean',
+                               'HeadHeading_min',
+                               'HeadRoll_max',
+                               'SaccadesNumber',
+                               'LeftBlinkOpeningSpeed_mean']]
+        '''
+        
+        X_train_df = X_train_df[['RightBlinkClosingSpeed_mean',
+                                 'RightBlinkClosingSpeed_max',
+                                 'LeftBlinkClosingSpeed_std',
+                                 'HeadRoll_median',
+                                 'HeadHeading_max',
+                                 #'RightBlinkOpeningAmplitude_mean',
+                                 #'RightBlinkOpeningAmplitude_median'
+                                 ]]
+        
+        X_train_df = X_train_df[['RightBlinkClosingSpeed_mean',
+                                 'RightBlinkClosingSpeed_max',
+                                 'LeftBlinkClosingSpeed_std']]
+        '''
         ################################# Fit #####################################
 
         classifier = RandomForestClassifier(class_weight=weight_dict)
@@ -168,6 +212,29 @@ def main():
         ############################## Predict ####################################
         
         X_test_featurized = featurize_data(X_test)
+        
+        X_test_df = pd.DataFrame(X_test_featurized, columns = features)
+        
+        X_test_df = X_test_df[['RightBlinkClosingSpeed_mean',
+                               'HeadHeading_min',
+                               'HeadRoll_max',
+                               'SaccadesNumber',
+                               'LeftBlinkOpeningSpeed_mean']]
+        '''
+        
+        X_test_df = X_test_df[['RightBlinkClosingSpeed_mean',
+                               'RightBlinkClosingSpeed_max',
+                               'LeftBlinkClosingSpeed_std',
+                               'HeadRoll_median',
+                               'HeadHeading_max',
+                               #'RightBlinkOpeningAmplitude_mean',
+                               #'RightBlinkOpeningAmplitude_median'
+                               ]]
+        
+        X_test_df = X_test_df[['RightBlinkClosingSpeed_mean',
+                                 'RightBlinkClosingSpeed_max',
+                                 'LeftBlinkClosingSpeed_std']]
+        '''
         y_pred = classifier.predict(X_test_featurized)
         print("Shape at output after classification:", y_pred.shape)
     
@@ -192,36 +259,7 @@ def main():
         prec_per_fold.append(precision)
         rec_per_fold.append(recall)
         f1_per_fold.append(f1)
-        
-        features = ['Saccade', 'Fixation',
-                    'LeftPupilDiameter', 'RightPupilDiameter',
-                    'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
-                    'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
-                    'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
-                    'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
-                    'HeadHeading', 'HeadPitch',	'HeadRoll']
-            
-        # Create a series containing feature importances from the model and feature names from the training data
-        new_feature_importances = pd.Series(classifier.feature_importances_)
-                   
-        new_feature_importances_lst = new_feature_importances.tolist()
-        feature_importances_lst = []
-        for i in range(0, len(features)):
-            feature_stats = new_feature_importances_lst[i*5:i*5+4]
-            feature_importances_lst.append(sum(feature_stats))
-        feature_importances = pd.Series(feature_importances_lst, index=features).sort_values(ascending=False)
-        
-        # Plot a simple bar chart
-        plt.rcParams["figure.autolayout"] = True
-        spacing = 0.100
-
-        fig = plt.figure()
-        fig.subplots_adjust(bottom=spacing)
-    
-        feature_importances.plot.bar(figsize=(20, 15), fontsize=22);
-        full_filename = os.path.join(FIG_DIR, "fold" + str(fold_no) + ".png")
-        plt.savefig(full_filename)
-        
+                
         # Increase fold number
         fold_no = fold_no + 1
 

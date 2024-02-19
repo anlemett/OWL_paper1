@@ -18,16 +18,16 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = True
+BINARY = False
 
 #SELECTED_FEATURES = "ALL"
 #SELECTED_FEATURES = "OCULAR"
 #SELECTED_FEATURES = "HEAD"
 #SELECTED_FEATURES = "SACCADE"
-#SELECTED_FEATURES = "FIXATION"
+SELECTED_FEATURES = "FIXATION"
 #SELECTED_FEATURES = "DIAMETER"
 #SELECTED_FEATURES = "BLINK"
-SELECTED_FEATURES = "DIAMETER_BLINK"
+#SELECTED_FEATURES = "DIAMETER_BLINK"
 
 
 TIME_INTERVAL_DURATION = 60
@@ -73,11 +73,11 @@ def featurize_data(x_data):
     max = np.max(x_data, axis=-2)
 
     featurized_data = np.concatenate([
-        mean,
-        std,
-        median,
-        min,
-        max,
+        mean,    #0.69 (diameter)
+        std,     #0.54 (diameter)
+        median,  #0.72  (diameter)
+        min,     #0.61 (diameter)
+        max,     #0.49 (diameter)
     ], axis=-1)
 
     print("Shape after feature union, before classification:", featurized_data.shape)
@@ -101,18 +101,20 @@ def main():
 
     scores_np = np.loadtxt(full_filename, delimiter=" ")
 
+    # Accuracy for medians per metric:
     if SELECTED_FEATURES == "OCULAR":
         TS_np = TS_np [:,:,0:14]
     elif SELECTED_FEATURES == "HEAD":
-        TS_np = TS_np [:,:,14:17]
-    elif SELECTED_FEATURES == "SACCADE":
+        #TODO: for head test sd, min, max
+        TS_np = TS_np [:,:,14:17] # 0.52, 0.52, 0.52
+    elif SELECTED_FEATURES == "SACCADE": # 0.52, 0.52
         TS_np = TS_np [:,:,0:2]
-    elif SELECTED_FEATURES == "FIXATION":
+    elif SELECTED_FEATURES == "FIXATION": # 0.48, 0.45
         TS_np = TS_np [:,:,2:4]
-    elif SELECTED_FEATURES == "DIAMETER":
+    elif SELECTED_FEATURES == "DIAMETER": # 0.61 0.55
         TS_np = TS_np [:,:,4:6]
-    elif SELECTED_FEATURES == "BLINK":
-        TS_np = TS_np [:,:,6:14]
+    elif SELECTED_FEATURES == "BLINK": # 0.41, 0.49, 0.42, 0.42, 0.42, 0.4, 0.42, 0.42
+        TS_np = TS_np [:,:,6:14] 
     elif SELECTED_FEATURES == "DIAMETER_BLINK":
         TS_np = TS_np [:,:,4:14]
 

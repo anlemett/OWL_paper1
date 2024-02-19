@@ -18,19 +18,37 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = True
+BINARY = False
 EQUAL_PERCENTILES = False
 
-#SELECTED_FEATURES = "ALL"
+SELECTED_FEATURES = "ALL"
 #SELECTED_FEATURES = "OCULAR"
 #SELECTED_FEATURES = "HEAD"
 #SELECTED_FEATURES = "SACCADE"
 #SELECTED_FEATURES = "FIXATION"
 #SELECTED_FEATURES = "DIAMETER"
 #SELECTED_FEATURES = "BLINK"
-SELECTED_FEATURES = "DIAMETER_BLINK"
+#SELECTED_FEATURES = "DIAMETER_BLINK"
 
 TIME_INTERVAL_DURATION = 60
+
+features = ['SaccadesNumber', 'SaccadesDuration',
+            'FixationNumber', 'FixationDuration']
+
+old_features = [
+            'LeftPupilDiameter', 'RightPupilDiameter',
+            'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
+            'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
+            'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
+            'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
+            'HeadHeading', 'HeadPitch', 'HeadRoll']
+
+statistics = ['mean', 'std', 'min', 'max', 'median']
+
+for feature in old_features:
+    for stat in statistics:
+        new_feature = feature + '_' + stat
+        features.append(new_feature)
 
 np.random.seed(0)
 
@@ -82,15 +100,19 @@ def featurize_data(x_data):
     max = np.max(x_data, axis=-2)
 
     featurized_data = np.concatenate([
-        mean,
-        std,
-        median,
-        min,
-        max,
+        mean,    
+        std,     
+        min,     
+        max, 
+        median
     ], axis=-1)
 
-    print("Shape after feature union, before classification:", featurized_data.shape)
-    return featurized_data
+    saccades_data = featurized_data[:,4:6]
+    fixation_data = featurized_data[:,14:16]
+    rest_data = featurized_data[:,20:]
+    new_featurized_data = np.concatenate((saccades_data, fixation_data, rest_data), axis=1)
+    print("Shape after feature union, before classification:", new_featurized_data.shape)
+    return new_featurized_data
 
 
 def main():
@@ -188,6 +210,8 @@ def main():
 
     ################################# Fit #####################################
     X_train_featurized = featurize_data(X_train)
+    
+    X_train_df = pd.DataFrame(X_train_featurized, columns = features)
 
     classifier = HistGradientBoostingClassifier(class_weight='balanced')
 
@@ -196,6 +220,8 @@ def main():
     ############################## Predict ####################################
 
     X_test_featurized = featurize_data(X_test)
+    
+    X_test_df = pd.DataFrame(X_test_featurized, columns = features)
 
     y_pred = classifier.predict(X_test_featurized)
     print("Shape at output after classification:", y_pred.shape)

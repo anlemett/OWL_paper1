@@ -18,7 +18,7 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = True
+BINARY = False
 EQUAL_PERCENTILES = True
 
 TIME_INTERVAL_DURATION = 60
