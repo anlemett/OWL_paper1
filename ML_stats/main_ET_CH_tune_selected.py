@@ -4,12 +4,12 @@ warnings.filterwarnings('ignore')
 import time
 import os
 import numpy as np
-import pandas as pd
 #import sys
 
-from sklearn import model_selection
+from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
+from scipy.stats import randint
 
 #import matplotlib.pyplot as plt
 
@@ -19,7 +19,30 @@ ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
 BINARY = True
-EQUAL_PERCENTILES = True
+
+features = ['SaccadesNumber', 'SaccadesTotalDuration',
+            'SaccadesDurationMean', 'SaccadesDurationStd', 'SaccadesDurationMedian',
+            'SaccadesDurationMin', 'SaccadesDurationMax', 'SaccadesDurationRange',
+            'FixationNumber', 'FixationTotalDuration',
+            'FixationDurationMean', 'FixationDurationStd', 'FixationDurationMedian',
+            'FixationDurationMin', 'FixationDurationMax', 'FixationDurationRange',]
+
+old_features = [
+            'LeftPupilDiameter', 'RightPupilDiameter',
+            'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
+            'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
+            'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
+            'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
+            'HeadHeading', 'HeadPitch', 'HeadRoll']
+
+statistics = ['mean', 'std', 'min', 'max', 'median']
+
+for feature in old_features:
+    for stat in statistics:
+        new_feature = feature + '_' + stat
+        features.append(new_feature)
+
+
 
 TIME_INTERVAL_DURATION = 60
 
@@ -57,45 +80,42 @@ def featurize_data(x_data):
     """
     print("Input shape before feature union:", x_data.shape)
 
-    mean = np.mean(x_data, axis=-2)
-    std = np.std(x_data, axis=-2)
-    median = np.median(x_data, axis=-2)
-    min = np.min(x_data, axis=-2)
-    max = np.max(x_data, axis=-2)
+    new_data = x_data[:,0,:16]
+    feature_to_featurize = x_data[:,:,16:]
+    mean = np.mean(feature_to_featurize, axis=-2)
+    std = np.std(feature_to_featurize, axis=-2)
+    median = np.median(feature_to_featurize, axis=-2)
+    min = np.min(feature_to_featurize, axis=-2)
+    max = np.max(feature_to_featurize, axis=-2)
 
     featurized_data = np.concatenate([
-        mean,
-        std,
-        median,
-        min,
-        max,
+        mean,    
+        std,     
+        min,     
+        max, 
+        median
     ], axis=-1)
 
-    print("Shape after feature union, before classification:", featurized_data.shape)
-    return featurized_data
+    new_data = np.concatenate((new_data, featurized_data), axis=1)
+    print("Shape after feature union, before classification:", new_data.shape)
+    return new_data
+
 
 
 def main():
     
-    full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__ET.csv")
+    full_filename = os.path.join(ML_DIR, "ML_ET_CH__ET.csv")
     print("reading data")
 
     # Load the 2D array from the CSV file
     TS_np = np.loadtxt(full_filename, delimiter=" ")
-    
-    #print(np.isnan(TS_np).any())
-    #nan_count = np.count_nonzero(np.isnan(TS_np))
-    #print(nan_count)
-    
-    # Reshape the 2D array back to its original 3D shape
-    # (number_of_timeintervals, TIME_INTERVAL_DURATION*250, number_of_features)
-    # 180 -> (631, 45000, 15), 60 -> (1768, 15000, 15)
-    if TIME_INTERVAL_DURATION == 180: 
-        TS_np = TS_np.reshape((631, 45000, 15)) # old
-    else: # 60
-        TS_np = TS_np.reshape((1731, 15000, 17)) #(1731, 15000, 17)
 
-    full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
+    # Reshape the 2D array back to its original 3D shape
+    # (number_of_timeintervals, 180*250, number_of_features)
+    # (667, 45000, 17)
+    TS_np = TS_np.reshape((667, 45000, 29))
+
+    full_filename = os.path.join(ML_DIR, "ML_ET_CH__CH.csv")
 
     scores_np = np.loadtxt(full_filename, delimiter=" ")
 
@@ -116,22 +136,9 @@ def main():
     #print(scores)
     
     if BINARY:
-        #Split into 2 bins by percentile
-        eeg_series = pd.Series(scores)
-        if EQUAL_PERCENTILES:
-            th = eeg_series.quantile(.5)
-        else:
-            th = eeg_series.quantile(.93)
-        scores = [1 if score < th else 2 for score in scores]
-
+        scores = [1 if score < 4 else 2 for score in scores]
     else:
-        #Split into 3 bins by percentile
-        eeg_series = pd.Series(scores)
-        if EQUAL_PERCENTILES:
-            (th1, th2) = eeg_series.quantile([.33, .66])
-        else:
-            (th1, th2) = eeg_series.quantile([.52, .93])
-        scores = [1 if score < th1 else 3 if score > th2 else 2 for score in scores]
+        scores = [1 if score < 2 else 3 if score > 3 else 2 for score in scores]
 
     #print(scores)
        
@@ -141,7 +148,7 @@ def main():
     weight_dict = weight_classes(scores)
         
     # Spit the data into train and test
-    X_train, X_test, y_train, y_test = model_selection.train_test_split(
+    X_train, X_test, y_train, y_test = train_test_split(
         TS_np, scores, test_size=0.1, random_state=0, shuffle=False
         )
     
@@ -155,15 +162,36 @@ def main():
     ################################# Fit #####################################
     X_train_featurized = featurize_data(X_train)
 
-    classifier = SVC(class_weight=weight_dict)
+    classifier = RandomForestClassifier(class_weight=weight_dict)
 
-    classifier.fit(X_train_featurized, y_train)
+    #TODO: add second parameter
+    param_dist = {'max_depth': randint(1,20)}
+    
+    # Use random search to find the best hyperparameters
+    rand_search = RandomizedSearchCV(classifier, 
+                                 param_distributions = param_dist, 
+                                 n_iter=5, 
+                                 cv=5)
+
+    # Fit the random search object to the data
+    rand_search.fit(X_train_featurized, y_train)   
+
+    #classifier.fit(X_train_featurized, y_train)
+    
+    # Create a variable for the best model
+    best_dt = rand_search.best_estimator_
+
+    # Print the best hyperparameters
+    print('Best hyperparameters:',  rand_search.best_params_)
+    #Binary: {'max_depth': 19}
+    #3 classes: {'max_depth': 11}
     
     ############################## Predict ####################################
 
     X_test_featurized = featurize_data(X_test)
 
-    y_pred = classifier.predict(X_test_featurized)
+    #y_pred = classifier.predict(X_test_featurized)
+    y_pred = best_dt.predict(X_test_featurized)
     print("Shape at output after classification:", y_pred.shape)
     
     ############################ Evaluate #####################################
@@ -183,7 +211,7 @@ def main():
     print("Recall: ", recall)
     print("F1-score:", f1)
 
-
+    
 start_time = time.time()
 
 main()

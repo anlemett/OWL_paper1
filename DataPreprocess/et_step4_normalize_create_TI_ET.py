@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import numpy as np
 import math
+import statistics
 #import sys
 
 from sklearn import preprocessing
@@ -15,7 +16,7 @@ ET_DIR = os.path.join(DATA_DIR, "EyeTracking3")
 CH_DIR = os.path.join(DATA_DIR, "CH1")
 OUTPUT_DIR = os.path.join(DATA_DIR, "EyeTracking4")
 
-TIME_INTERVAL_DURATION = 180  #sec
+TIME_INTERVAL_DURATION = 60  #sec
 
 filenames = [["D1r1_MO", "D1r2_MO", "D1r3_MO"],
              ["D1r4_EI", "D1r5_EI", "D1r6_EI"],
@@ -37,7 +38,7 @@ filenames = [["D1r1_MO", "D1r2_MO", "D1r3_MO"],
              ["D9r4_SV", "D9r5_SV", "D9r6_SV"]
              ]
 
-#filenames = [["D6r4_HC"]]
+#filenames = [["D1r1_MO"]]
 
 # Old features:
 #           ['Saccade', 'Fixation',
@@ -48,8 +49,12 @@ filenames = [["D1r1_MO", "D1r2_MO", "D1r3_MO"],
 #            'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
 #            'HeadHeading', 'HeadPitch', 'HeadRoll']
 
-new_features = ['SaccadesNumber', 'SaccadesDuration',
-                'FixationNumber', 'FixationDuration',
+new_features = ['SaccadesNumber', 'SaccadesTotalDuration',
+                'SaccadesDurationMean', 'SaccadesDurationStd', 'SaccadesDurationMedian',
+                'SaccadesDurationMin', 'SaccadesDurationMax',
+                'FixationNumber', 'FixationTotalDuration',
+                'FixationDurationMean', 'FixationDurationStd', 'FixationDurationMedian',
+                'FixationDurationMin', 'FixationDurationMax',
                 'LeftPupilDiameter', 'RightPupilDiameter',
                 'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
                 'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
@@ -105,34 +110,111 @@ for atco in filenames:
         number_of_time_intervals = len(timeIntervals)
                         
         SaccadesNumber = []
-        SaccadesDuration = []
+        SaccadesTotalDuration = []
+        SaccadesDurationMean = []
+        SaccadesDurationStd = []
+        SaccadesDurationMedian = []
+        SaccadesDurationMin = []
+        SaccadesDurationMax = []
+
         FixationNumber = []
-        FixationDuration = []
-        
-        #Add Saccade and Fixation number and duration per period
+        FixationTotalDuration = []
+        FixationDurationMean = []
+        FixationDurationStd = []
+        FixationDurationMedian = []
+        FixationDurationMin = []
+        FixationDurationMax = []
+       
+        #Add Saccade/Fixation number, total duration and duration stats per period
         for ti in range(1, number_of_time_intervals+1):
             ti_df = df[df['timeInterval']==ti]
             
             if ti_df.empty:
                 continue
             
-            saccades_duration = len(ti_df[ti_df['Saccade']!=0].index)
-            saccades = ti_df['Saccade'].tolist()
-            saccades_number = len(set(saccades))
+            ti_saccades_df = ti_df[ti_df['Saccade']!=0]
+            if ti_saccades_df.empty:
+                saccades_total_duration = 0
+                saccades_number = 0
+                saccades_duration_mean = 0
+                saccades_duration_std = 0
+                saccades_duration_median = 0
+                saccades_duration_min = 0
+                saccades_duration_max = 0
+
+            else:
+                saccades_total_duration = len(ti_saccades_df.index)
+                saccades_set = set(ti_saccades_df['Saccade'].tolist())
+                saccades_number = len(saccades_set)
+                saccades_duration = []
+                for saccade in saccades_set:
+                    saccade_df = ti_df[ti_df['Saccade']==saccade]
+                    saccades_duration.append(len(saccade_df.index))
+                
+                saccades_duration_mean = statistics.mean(saccades_duration)
+                saccades_duration_std = statistics.stdev(saccades_duration)
+                saccades_duration_median = statistics.median(saccades_duration)
+                saccades_duration_min = min(saccades_duration)
+                saccades_duration_max = max(saccades_duration)
+
+            ti_fixation_df = ti_df[ti_df['Fixation']!=0]
+
+            if ti_fixation_df.empty:
+                fixation_total_duration = 0
+                fixation_number = 0
+                fixation_duration_mean = 0
+                fixation_duration_std = 0
+                fixation_duration_median = 0
+                fixation_duration_min = 0
+                fixation_duration_max = 0
+
+            else:
+                fixation_total_duration = len(ti_fixation_df.index)
+                fixation_set = set(ti_fixation_df['Fixation'].tolist())
+                fixation_number = len(fixation_set)
+                fixation_duration = []
+                for fixation in fixation_set:
+                    fixation_df = ti_df[ti_df['Fixation']==fixation]
+                    fixation_duration.append(len(fixation_df.index))
             
-            fixation_duration = len(ti_df[ti_df['Fixation']!=0].index)
-            fixations = ti_df['Fixation'].tolist()
-            fixation_number = len(set(fixations))
+                fixation_duration_mean = statistics.mean(fixation_duration)
+                fixation_duration_std = statistics.stdev(fixation_duration)
+                fixation_duration_median = statistics.median(fixation_duration)
+                fixation_duration_min = min(fixation_duration)
+                fixation_duration_max = max(fixation_duration)
             
             SaccadesNumber.extend([saccades_number]*TIME_INTERVAL_DURATION*250)
-            SaccadesDuration.extend([saccades_duration]*TIME_INTERVAL_DURATION*250)
+            SaccadesTotalDuration.extend([saccades_total_duration]*TIME_INTERVAL_DURATION*250)
+            SaccadesDurationMean.extend([saccades_duration_mean]*TIME_INTERVAL_DURATION*250)
+            SaccadesDurationStd.extend([saccades_duration_std]*TIME_INTERVAL_DURATION*250)
+            SaccadesDurationMedian.extend([saccades_duration_median]*TIME_INTERVAL_DURATION*250)
+            SaccadesDurationMin.extend([saccades_duration_min]*TIME_INTERVAL_DURATION*250)
+            SaccadesDurationMax.extend([saccades_duration_max]*TIME_INTERVAL_DURATION*250)
+            
             FixationNumber.extend([fixation_number]*TIME_INTERVAL_DURATION*250)
-            FixationDuration.extend([fixation_duration]*TIME_INTERVAL_DURATION*250)
-        
+            FixationTotalDuration.extend([fixation_total_duration]*TIME_INTERVAL_DURATION*250)
+            FixationDurationMean.extend([fixation_duration_mean]*TIME_INTERVAL_DURATION*250)
+            FixationDurationStd.extend([fixation_duration_std]*TIME_INTERVAL_DURATION*250)
+            FixationDurationMedian.extend([fixation_duration_median]*TIME_INTERVAL_DURATION*250)
+            FixationDurationMin.extend([fixation_duration_min]*TIME_INTERVAL_DURATION*250)
+            FixationDurationMax.extend([fixation_duration_max]*TIME_INTERVAL_DURATION*250)
+
+     
         df['SaccadesNumber'] = SaccadesNumber
-        df['SaccadesDuration'] = SaccadesDuration
+        df['SaccadesTotalDuration'] = SaccadesTotalDuration
+        df['SaccadesDurationMean'] = SaccadesDurationMean
+        df['SaccadesDurationStd'] = SaccadesDurationStd
+        df['SaccadesDurationMedian'] = SaccadesDurationMedian
+        df['SaccadesDurationMin'] = SaccadesDurationMin
+        df['SaccadesDurationMax'] = SaccadesDurationMax
+        
         df['FixationNumber'] = FixationNumber
-        df['FixationDuration'] = FixationDuration
+        df['FixationTotalDuration'] = FixationTotalDuration
+        df['FixationDurationMean'] = FixationDurationMean
+        df['FixationDurationStd'] = FixationDurationStd
+        df['FixationDurationMedian'] = FixationDurationMedian
+        df['FixationDurationMin'] = FixationDurationMin
+        df['FixationDurationMax'] = FixationDurationMax
         
         df = df.drop('Saccade', axis=1)
         df = df.drop('Fixation', axis=1)
@@ -147,7 +229,7 @@ for atco in filenames:
         df = df[columns]
         
         atco_df = pd.concat([atco_df, df], ignore_index=True)
-        
+    
     #####################################
     #scale the values
     scaler = preprocessing.MinMaxScaler()
@@ -166,7 +248,7 @@ for atco in filenames:
 #print(nan_count)
 
 pd.set_option('display.max_columns', None)
-print(TI_df.head(1))
+#print(TI_df.head(1))
 
 full_filename = os.path.join(OUTPUT_DIR, "ET_all_" + str(TIME_INTERVAL_DURATION) + ".csv")
 TI_df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)

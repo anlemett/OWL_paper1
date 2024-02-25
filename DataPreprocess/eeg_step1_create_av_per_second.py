@@ -11,7 +11,6 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 INPUT_DIR = os.path.join(DATA_DIR, "EEG1")
 OUTPUT_DIR = os.path.join(DATA_DIR, "EEG2")
 
-metrics_list = ['workload']
 
 def getUnixTimestampS(ts_ms):
     return int(ts_ms/1000)
@@ -55,7 +54,7 @@ for filename in filenames:
     print(first_timestamp)
     print(last_timestamp)
     
-    new_df = pd.DataFrame(columns=['UnixTimestamp', 'workload'])
+    new_df = pd.DataFrame(columns=['UnixTimestamp', 'workload', 'vigilance', 'stress'])
 
     for ts in range(first_timestamp, last_timestamp + 1):
  
@@ -64,11 +63,23 @@ for filename in filenames:
         if ts_df.empty:
             print(filename + ": empty second")
             continue
-            
+        
         eeg_wl_av = mean(ts_df['workload'].tolist())
         
+        vig_lst = ts_df['vigilance'].tolist()
+        
+        for i in range(1, len(vig_lst)): #0 element seems to be fine in all files
+            if vig_lst[i]>100:
+                vig_lst[i] = vig_lst[i-1] 
+        
+        eeg_vig_av = mean(vig_lst)
+        
+        eeg_stress_av = mean(ts_df['stress'].tolist())
+        
+        
         # append the row
-        new_row = {'UnixTimestamp': ts, 'workload': eeg_wl_av}
+        new_row = {'UnixTimestamp': ts, 'workload': eeg_wl_av,
+                   'vigilance': eeg_vig_av, 'stress': eeg_stress_av}
         new_df = pd.concat([new_df, pd.DataFrame([new_row])], ignore_index=True)
  
     full_filename = os.path.join(OUTPUT_DIR, filename +  ".csv")

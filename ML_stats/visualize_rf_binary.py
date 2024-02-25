@@ -15,9 +15,12 @@ rf = pickle.load(open(filename, 'rb'))
 
 ############################ Visualize first DT ###############################
 
-features3 = ['RightBlinkClosingSpeed_mean',
-             'RightBlinkClosingSpeed_max',
-             'LeftBlinkClosingSpeed_std']
+#features3 = ['RightBlinkClosingSpeed_mean',
+#             'RightBlinkClosingSpeed_max',
+#             'LeftBlinkClosingSpeed_std']
+features3 = ['RightPupilDiameter_min',
+            'LeftPupilDiameter_max',
+            'RightBlinkClosingSpeed_median']
     
 classes = ["low", "high"]
 print(rf.classes_) #[1 2]
@@ -33,7 +36,7 @@ dot_data = export_graphviz(rf.estimators_[0],
 graph = graphviz.Source(dot_data, format='png')
 
 #fig_filename = 'RF_dt0.svg'
-fig_filename = 'RF_dt0.png'
+fig_filename = 'RF_dt0'
 graph.render(fig_filename)
 
 '''
@@ -95,7 +98,7 @@ fig_filename = 'RF_dt0_sample0.png'
 graph.write_png(fig_filename)
 
 ############################ Visualize sample 56 ##############################
-tree0 = rf.estimators_[56]
+tree0 = rf.estimators_[0]
 
 dot_data = export_graphviz(tree0, out_file=None,
                                 feature_names=features3,

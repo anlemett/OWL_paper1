@@ -18,8 +18,12 @@ ML_DIR = os.path.join(DATA_DIR, "MLInput")
 TIME_INTERVAL_DURATION = 60
 WINDOW_SIZE = 250 * TIME_INTERVAL_DURATION
 
-features = ['SaccadesNumber', 'SaccadesDuration',
-            'FixationNumber', 'FixationDuration',
+features = ['SaccadesNumber', 'SaccadesTotalDuration',
+            'SaccadesDurationMean', 'SaccadesDurationStd', 'SaccadesDurationMedian',
+            'SaccadesDurationMin', 'SaccadesDurationMax',
+            'FixationNumber', 'FixationTotalDuration',
+            'FixationDurationMean', 'FixationDurationStd', 'FixationDurationMedian',
+            'FixationDurationMin', 'FixationDurationMax',
             'LeftPupilDiameter', 'RightPupilDiameter',
             'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
             'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
@@ -43,7 +47,10 @@ def get_TS_np(features):
     # we squeeze to 0 the dimension which we do not know and
     # to which we want to append
     TS_np = np.zeros(shape=(0, window_size, number_of_features))
-    all_scores = []
+    
+    all_WL_scores = []
+    all_Vig_scores = []
+    all_Stress_scores = []
     
     #**************************************
     print("Reading Eye Tracking data")
@@ -79,7 +86,9 @@ def get_TS_np(features):
             number_of_time_intervals = len(eeg_run_df['timeInterval'].tolist())
         
             run_TS_np = np.zeros(shape=(number_of_time_intervals, window_size, number_of_features))
-            run_scores = []
+            run_WL_scores = []
+            run_Vig_scores = []
+            run_Stress_scores = []
             
             print(number_of_time_intervals)
             dim1_idx = 0
@@ -87,14 +96,21 @@ def get_TS_np(features):
                 et_ti_df = et_run_df[et_run_df['timeInterval']==ti]
                 eeg_ti_df = eeg_run_df[eeg_run_df['timeInterval']==ti]
                 
-                ti_score_lst = eeg_ti_df['WorkloadMean'].tolist()
-                if math.isnan(ti_score_lst[0]):
+                ti_WL_score_lst = eeg_ti_df['WorkloadMean'].tolist()
+                ti_Vig_score_lst = eeg_ti_df['VigilanceMean'].tolist()
+                ti_Stress_score_lst = eeg_ti_df['StressMean'].tolist()
+                if math.isnan(ti_WL_score_lst[0]):
                     continue
-                
+                if math.isnan(ti_Vig_score_lst[0]):
+                    continue                
+                if math.isnan(ti_Stress_score_lst[0]):
+                    continue
                 if et_ti_df.empty:
                     continue
                 
-                ti_score = ti_score_lst[0]
+                ti_WL_score = ti_WL_score_lst[0]
+                ti_Vig_score = ti_Vig_score_lst[0]
+                ti_Stress_score = ti_Stress_score_lst[0]
                 
                 dim2_idx = 0
                 for index, row in et_ti_df.iterrows():
@@ -103,7 +119,9 @@ def get_TS_np(features):
                     run_TS_np[dim1_idx, dim2_idx] = lst_of_features
                     dim2_idx = dim2_idx + 1
                     
-                run_scores.append(ti_score)
+                run_WL_scores.append(ti_WL_score)
+                run_Vig_scores.append(ti_Vig_score)
+                run_Stress_scores.append(ti_Stress_score)
                         
                 dim1_idx = dim1_idx + 1
                 
@@ -111,8 +129,11 @@ def get_TS_np(features):
                 run_TS_np = run_TS_np[:dim1_idx]
                 
             TS_np = np.append(TS_np, run_TS_np, axis=0)
-            all_scores.extend(run_scores)
+            all_WL_scores.extend(run_WL_scores)
+            all_Vig_scores.extend(run_Vig_scores)
+            all_Stress_scores.extend(run_Stress_scores)
 
+    all_scores = np.array((all_WL_scores, all_Vig_scores, all_Stress_scores))
     return (TS_np, all_scores)
 
 (TS_np, scores) = get_TS_np(features)

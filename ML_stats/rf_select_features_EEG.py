@@ -19,13 +19,22 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = False
+BINARY = True
 EQUAL_PERCENTILES = False
+
+LABEL = "Workload"
+#LABEL = "Vigilance"
+#LABEL = "Stress"
 
 TIME_INTERVAL_DURATION = 60
 
-features = ['SaccadesNumber', 'SaccadesDuration',
-            'FixationNumber', 'FixationDuration']
+saccade_fixation = ['SaccadesNumber', 'SaccadesTotalDuration',
+            'SaccadesDurationMean', 'SaccadesDurationStd', 'SaccadesDurationMedian',
+            'SaccadesDurationMin', 'SaccadesDurationMax',
+            'FixationNumber', 'FixationTotalDuration',
+            'FixationDurationMean', 'FixationDurationStd', 'FixationDurationMedian',
+            'FixationDurationMin', 'FixationDurationMax',
+            ]
 
 old_features = [
             'LeftPupilDiameter', 'RightPupilDiameter',
@@ -37,21 +46,18 @@ old_features = [
 
 statistics = ['mean', 'std', 'min', 'max', 'median']
 
+features = []
+
 for feature in old_features:
     for stat in statistics:
         new_feature = feature + '_' + stat
         features.append(new_feature)
 
+for feature in saccade_fixation:
+    features.append(feature)
+
 np.random.seed(0)
 
-# old features: ['SaccadesNumber', 'SaccadesDuration',
-#              'FixationNumber', 'FixationDuration',
-#              'LeftPupilDiameter', 'RightPupilDiameter',
-#              'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
-#              'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
-#              'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
-#              'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
-#              'HeadHeading', 'HeadPitch', 'HeadRoll']
 
 def weight_classes(scores):
     
@@ -72,7 +78,6 @@ def weight_classes(scores):
         
     return weight_dict
 
-
 def featurize_data(x_data):
     """
     :param x_data: numpy array of shape
@@ -85,11 +90,17 @@ def featurize_data(x_data):
     """
     print("Input shape before feature union:", x_data.shape)
 
-    mean = np.mean(x_data, axis=-2)
-    std = np.std(x_data, axis=-2)
-    median = np.median(x_data, axis=-2)
-    min = np.min(x_data, axis=-2)
-    max = np.max(x_data, axis=-2)
+    #new_data = x_data[:,0,:14]
+    #feature_to_featurize = x_data[:,:,14:]
+    #feature_to_featurize = x_data[:,:,16:] #exclude pupil diameter
+
+    new_data = x_data[:,0,13:]
+    feature_to_featurize = x_data[:,:,:13]
+    mean = np.mean(feature_to_featurize, axis=-2)
+    std = np.std(feature_to_featurize, axis=-2)
+    median = np.median(feature_to_featurize, axis=-2)
+    min = np.min(feature_to_featurize, axis=-2)
+    max = np.max(feature_to_featurize, axis=-2)
 
     featurized_data = np.concatenate([
         mean,    
@@ -99,12 +110,9 @@ def featurize_data(x_data):
         median
     ], axis=-1)
 
-    saccades_data = featurized_data[:,4:6]
-    fixation_data = featurized_data[:,14:16]
-    rest_data = featurized_data[:,20:]
-    new_featurized_data = np.concatenate((saccades_data, fixation_data, rest_data), axis=1)
-    print("Shape after feature union, before classification:", new_featurized_data.shape)
-    return new_featurized_data
+    new_data = np.concatenate((new_data, featurized_data), axis=1)
+    print("Shape after feature union, before classification:", new_data.shape)
+    return new_data
 
 
 def main():
@@ -125,18 +133,24 @@ def main():
     if TIME_INTERVAL_DURATION == 180: 
         TS_np = TS_np.reshape((631, 45000, 15)) # old
     else: # 60
-        TS_np = TS_np.reshape((1731, 15000, 17)) #(1731, 15000, 17)
+        TS_np = TS_np.reshape((1731, 15000, 27))
 
     full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
 
     scores_np = np.loadtxt(full_filename, delimiter=" ")
 
     ###########################################################################
-    #Shuffle data
+    #Shuffle rows (samples)
 
     print(TS_np.shape)
     print(scores_np.shape)
-
+    
+    if LABEL == "Workload":
+        scores_np = scores_np[0,:] # WL
+    elif LABEL == "Vigilance":
+        scores_np = scores_np[1,:] # Vigilance
+    else:
+        scores_np = scores_np[2,:] # Stress
     zipped = list(zip(TS_np, scores_np))
 
     np.random.shuffle(zipped)
@@ -153,7 +167,12 @@ def main():
         if EQUAL_PERCENTILES:
             th = eeg_series.quantile(.5)
         else:
-            th = eeg_series.quantile(.93)
+            if LABEL == "Workload":
+                th = eeg_series.quantile(.93)
+            elif LABEL == "Vigilance":
+                th = eeg_series.quantile(.1)
+            else: #Stress
+                th = eeg_series.quantile(.9)
         scores = [1 if score < th else 2 for score in scores]
 
     else:
@@ -174,7 +193,11 @@ def main():
         
     TS_np = np.array(TS_np)
     X = featurize_data(TS_np)
-    X_df = pd.DataFrame(X, columns = features)  
+    
+    X_df = pd.DataFrame(X, columns = features)
+    
+    #Shuffle columns (features)
+    #X_df = X_df[np.random.permutation(X_df.columns)]
     
     y = np.array(scores)
     y = pd.Series(y)
@@ -185,12 +208,19 @@ def main():
     selectors = {
 
         # Non-linear tree-based methods
-        "random_forest5": SelectionMethod.TreeBased(num_features=5),
+        "random_forest": SelectionMethod.TreeBased(num_features=1.0),
+        #"random_forest3": SelectionMethod.TreeBased(num_features=3),
 
     }
     # Benchmark (sequential)
+    print(X_df.shape)
     score_df, selected_df, runtime_df = benchmark(selectors, X_df, y,
-                                                  cv=5)
+                                                  cv=10,
+                                                  drop_zero_variance_features=False,
+                                                  verbose=True,
+                                                  seed=0
+                                                  )
+    print(score_df.shape)
     #print(score_df, "\n\n", selected_df, "\n\n", runtime_df)
    
     #selected_df = selected_df[selected_df['random_forest5']==1]
@@ -199,7 +229,15 @@ def main():
     # Get benchmark statistics by feature
     stats_df = calculate_statistics(score_df, selected_df)
     pd.set_option('display.max_columns', None)
-    print(stats_df)
+    #print(stats_df)
+    print(stats_df.shape)
+    if LABEL == "Workload":
+        stats_df.to_csv("feature_importance_WL.csv", sep = ",", header=True, index=True)
+    elif LABEL == "Vigilance":
+        stats_df.to_csv("feature_importance_vig.csv", sep = ",", header=True, index=True)
+    else: # Stress
+        stats_df.to_csv("feature_importance_stress.csv", sep = ",", header=True, index=True)
+
     
 start_time = time.time()
 

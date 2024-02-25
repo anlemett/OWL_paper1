@@ -13,8 +13,12 @@ ML_DIR = os.path.join(DATA_DIR, "MLInput")
 
 WINDOW_SIZE = 250 * 180
 
-features = ['SaccadesNumber', 'SaccadesDuration',
-            'FixationNumber', 'FixationDuration',
+features = ['SaccadesNumber', 'SaccadesTotalDuration',
+            'SaccadesDurationMean', 'SaccadesDurationStd', 'SaccadesDurationMedian',
+            'SaccadesDurationMin', 'SaccadesDurationMax',
+            'FixationNumber', 'FixationTotalDuration',
+            'FixationDurationMean', 'FixationDurationStd', 'FixationDurationMedian',
+            'FixationDurationMin', 'FixationDurationMax',
             'LeftPupilDiameter', 'RightPupilDiameter',
             'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
             'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
@@ -107,7 +111,6 @@ print(len(scores))
 
 # Reshape the 3D array to 2D
 TS_np_reshaped = TS_np.reshape(TS_np.shape[0], -1)
-
 # Save the 2D array to a CSV file
 full_filename = os.path.join(ML_DIR, "ML_ET_CH__ET.csv")
 np.savetxt(full_filename, TS_np_reshaped, delimiter=" ")

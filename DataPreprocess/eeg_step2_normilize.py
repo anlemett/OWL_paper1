@@ -8,7 +8,7 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 INPUT_DIR = os.path.join(DATA_DIR, "EEG2")
 OUTPUT_DIR = os.path.join(DATA_DIR, "EEG3")
 
-metrics_list = ['workload']
+metrics_list = ['workload', 'vigilance', 'stress']
 #normalize for each participant (with all 3 runs as one set)
 
 filenames = [["D1r1_MO", "D1r2_MO", "D1r3_MO"],
@@ -43,14 +43,23 @@ for atco in filenames:
         df = pd.read_csv(full_filename, sep=' ')
         atco_df = pd.concat([atco_df, df], ignore_index=True)
     
-    atco_min = atco_df['workload'].min()
-    atco_max = atco_df['workload'].max()
+    atco_wl_min = atco_df['workload'].min()
+    atco_wl_max = atco_df['workload'].max()
+    
+    atco_vig_min = atco_df['vigilance'].min()
+    atco_vig_max = atco_df['vigilance'].max()
+    
+    atco_stress_min = atco_df['stress'].min()
+    atco_stress_max = atco_df['stress'].max()
+
     
     for filename in atco:
         full_filename = os.path.join(INPUT_DIR, filename +  ".csv")
         df = pd.read_csv(full_filename, sep=' ')
     
-        df['WL'] = df.apply(lambda row: normilize(atco_min, atco_max, row['workload']), axis=1)
+        df['WL'] = df.apply(lambda row: normilize(atco_wl_min, atco_wl_max, row['workload']), axis=1)
+        df['Vigilance'] = df.apply(lambda row: normilize(atco_vig_min, atco_vig_max, row['vigilance']), axis=1)
+        df['Stress'] = df.apply(lambda row: normilize(atco_stress_min, atco_stress_max, row['stress']), axis=1)
     
         full_filename = os.path.join(OUTPUT_DIR, filename +  ".csv")
         df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)

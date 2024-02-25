@@ -7,9 +7,14 @@ import numpy as np
 import pandas as pd
 #import sys
 
-from sklearn import model_selection
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
+from sklearn.svm import SVC
+
+from sklearn.model_selection import RandomizedSearchCV, train_test_split
+from scipy.stats import randint
 
 #import matplotlib.pyplot as plt
 
@@ -18,10 +23,44 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = False
-EQUAL_PERCENTILES = True
+BINARY = True
+EQUAL_PERCENTILES = False
+
+#MODEL = "LR"
+#MODEL = "DT"
+MODEL = "RF"
+#MODEL = "SVC"
+#MODEL = "HGBC"
+
+LABEL = "Workload"
+#LABEL = "Vigilance"
+#LABEL = "Stress"
+
 
 TIME_INTERVAL_DURATION = 60
+
+features = ['SaccadesNumber', 'SaccadesTotalDuration',
+            'SaccadesDurationMean', 'SaccadesDurationStd', 'SaccadesDurationMedian',
+            'SaccadesDurationMin', 'SaccadesDurationMax',
+            'FixationNumber', 'FixationTotalDuration',
+            'FixationDurationMean', 'FixationDurationStd', 'FixationDurationMedian',
+            'FixationDurationMin', 'FixationDurationMax',
+            ]
+
+old_features = [
+            'LeftPupilDiameter', 'RightPupilDiameter',
+            'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
+            'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
+            'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
+            'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
+            'HeadHeading', 'HeadPitch', 'HeadRoll']
+
+statistics = ['mean', 'std', 'min', 'max', 'median']
+
+for feature in old_features:
+    for stat in statistics:
+        new_feature = feature + '_' + stat
+        features.append(new_feature)
 
 np.random.seed(0)
 
@@ -57,22 +96,26 @@ def featurize_data(x_data):
     """
     print("Input shape before feature union:", x_data.shape)
 
-    mean = np.mean(x_data, axis=-2)
-    std = np.std(x_data, axis=-2)
-    median = np.median(x_data, axis=-2)
-    min = np.min(x_data, axis=-2)
-    max = np.max(x_data, axis=-2)
+    new_data = x_data[:,0,:14]
+    feature_to_featurize = x_data[:,:,14:]
+    #feature_to_featurize = x_data[:,:,16:] #exclude pupil diameter
+    mean = np.mean(feature_to_featurize, axis=-2)
+    std = np.std(feature_to_featurize, axis=-2)
+    median = np.median(feature_to_featurize, axis=-2)
+    min = np.min(feature_to_featurize, axis=-2)
+    max = np.max(feature_to_featurize, axis=-2)
 
     featurized_data = np.concatenate([
-        mean,
-        std,
-        median,
-        min,
-        max,
+        mean,    
+        std,     
+        min,     
+        max, 
+        median
     ], axis=-1)
 
-    print("Shape after feature union, before classification:", featurized_data.shape)
-    return featurized_data
+    new_data = np.concatenate((new_data, featurized_data), axis=1)
+    print("Shape after feature union, before classification:", new_data.shape)
+    return new_data
 
 
 def main():
@@ -93,17 +136,25 @@ def main():
     if TIME_INTERVAL_DURATION == 180: 
         TS_np = TS_np.reshape((631, 45000, 15)) # old
     else: # 60
-        TS_np = TS_np.reshape((1731, 15000, 17)) #(1731, 15000, 17)
+        TS_np = TS_np.reshape((1731, 15000, 27))
 
     full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
 
     scores_np = np.loadtxt(full_filename, delimiter=" ")
+    
 
     ###########################################################################
     #Shuffle data
 
     print(TS_np.shape)
     print(scores_np.shape)
+    
+    if LABEL == "Workload":
+        scores_np = scores_np[0,:] # WL
+    elif LABEL == "Vigilance":
+        scores_np = scores_np[1,:] # Vigilance
+    else:
+        scores_np = scores_np[2,:] # Stress
 
     zipped = list(zip(TS_np, scores_np))
 
@@ -121,7 +172,12 @@ def main():
         if EQUAL_PERCENTILES:
             th = eeg_series.quantile(.5)
         else:
-            th = eeg_series.quantile(.93)
+            if LABEL == "Workload":
+                th = eeg_series.quantile(.93)
+            elif LABEL == "Vigilance":
+                th = eeg_series.quantile(.1)
+            else:
+                th = eeg_series.quantile(.9)
         scores = [1 if score < th else 2 for score in scores]
 
     else:
@@ -131,6 +187,7 @@ def main():
             (th1, th2) = eeg_series.quantile([.33, .66])
         else:
             (th1, th2) = eeg_series.quantile([.52, .93])
+            #(th1, th2) = eeg_series.quantile([.7, .48])
         scores = [1 if score < th1 else 3 if score > th2 else 2 for score in scores]
 
     #print(scores)
@@ -139,33 +196,74 @@ def main():
     print(f"Number of classes : {number_of_classes}")
     
     weight_dict = weight_classes(scores)
-        
+    
+    print(type(TS_np))
+    TS_np = np.array(TS_np)
+    print(type(TS_np))
+    X = featurize_data(TS_np)
+    
+    X_df = pd.DataFrame(X, columns = features)
+    
     # Spit the data into train and test
-    X_train, X_test, y_train, y_test = model_selection.train_test_split(
-        TS_np, scores, test_size=0.1, random_state=0, shuffle=False
+    X_train_df, X_test_df, y_train, y_test = train_test_split(
+        X_df, scores, test_size=0.1, shuffle=False
         )
     
-    X_train = np.array(X_train)
-    X_test = np.array(X_test)
+    #X_train = np.array(X_train)
+    #X_test = np.array(X_test)
     
-    print(
-        f"Length of train  X : {len(X_train)}\nLength of test X : {len(X_test)}\nLength of train Y : {len(y_train)}\nLength of test Y : {len(y_test)}"
-        )
 
     ################################# Fit #####################################
-    X_train_featurized = featurize_data(X_train)
 
-    classifier = LogisticRegression(class_weight=weight_dict)
+    if MODEL == "LR":
+        clf = LogisticRegression(class_weight=weight_dict)
+        clf.fit(X_train_df, y_train)
+    elif  MODEL == "DT":
+        clf = DecisionTreeClassifier(class_weight=weight_dict)
+        clf.fit(X_train_df, y_train)
+    elif  MODEL == "RF":
+        clf = RandomForestClassifier(class_weight=weight_dict, random_state=0)
+        
+        param_dist = {'n_estimators': randint(50,500),
+             'max_depth': randint(1,79)}
+        
+        # Use random search to find the best hyperparameters
+        rand_search = RandomizedSearchCV(clf, 
+                                param_distributions = param_dist, 
+                                n_iter=5, 
+                                cv=10)
 
-    classifier.fit(X_train_featurized, y_train)
+        # Fit the random search object to the data
+        rand_search.fit(X_train_df, y_train)   
+ 
+        # Create a variable for the best model
+        best_rf = rand_search.best_estimator_
+
+        # Print the best hyperparameters
+        print('Best hyperparameters:',  rand_search.best_params_)
+        #{'max_depth': 39, 'n_estimators': 102}
+        
+        
+        
+    elif MODEL == "SVC":
+        clf = SVC(class_weight=weight_dict)
+        clf.fit(X_train_df, y_train)
+    elif  MODEL == "HGBC":
+        clf = HistGradientBoostingClassifier(class_weight='balanced')
+        clf.fit(X_train_df, y_train)
+    
+    #importances = clf.feature_importances_
+    #print(type(importances)) # class 'numpy.ndarray' 1x79
     
     ############################## Predict ####################################
-
-    X_test_featurized = featurize_data(X_test)
-
-    y_pred = classifier.predict(X_test_featurized)
-    print("Shape at output after classification:", y_pred.shape)
     
+    if  MODEL == "RF":
+        y_pred = best_rf.predict(X_test_df)
+    else:
+        y_pred = clf.predict(X_test_df)
+
+    print("Shape at output after classification:", y_pred.shape)
+
     ############################ Evaluate #####################################
     
     accuracy = accuracy_score(y_pred=y_pred, y_true=y_test)
@@ -182,8 +280,8 @@ def main():
     print("Precision: ", precision)
     print("Recall: ", recall)
     print("F1-score:", f1)
-
-
+    
+    
 start_time = time.time()
 
 main()

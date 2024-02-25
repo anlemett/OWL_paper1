@@ -10,8 +10,8 @@ from statistics import mean, median
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
 EEG_DIR = os.path.join(DATA_DIR, "EEG3")
-CH_DIR = os.path.join(DATA_DIR, "CH")
-OUTPUT_DIR = os.path.join(DATA_DIR, "MLInput")
+CH_DIR = os.path.join(DATA_DIR, "CH1")
+OUTPUT_DIR = os.path.join(DATA_DIR, "EEG4")
 
 TIME_INTERVAL_DURATION = 60  #sec
 
@@ -76,16 +76,28 @@ for atco in filenames:
             if ti_df.empty:
                  ti_wl_mean = None
                  ti_wl_median = None
+                 ti_vig_mean = None
+                 ti_vig_median = None
+                 ti_stress_mean = None
+                 ti_stress_median = None
             else:
                 ti_wl_mean = mean(ti_df.dropna()['WL'].tolist())
                 ti_wl_median = median(ti_df.dropna()['WL'].tolist())
+                ti_vig_mean = mean(ti_df.dropna()['Vigilance'].tolist())
+                ti_vig_median = median(ti_df.dropna()['Vigilance'].tolist())
+                ti_stress_mean = mean(ti_df.dropna()['Stress'].tolist())
+                ti_stress_median = median(ti_df.dropna()['Stress'].tolist())
+
                 
             new_row = {'ATCO': filename[-2:], 'Run': run, 'timeInterval': ti,
-                       'WorkloadMean': ti_wl_mean, 'WorkloadMedian': ti_wl_median}
+                       'WorkloadMean': ti_wl_mean, 'WorkloadMedian': ti_wl_median,
+                       'VigilanceMean': ti_vig_mean, 'VigilanceMedian': ti_vig_median,
+                       'StressMean': ti_stress_mean, 'StressMedian': ti_stress_median,
+                       }
 
             ML_df = pd.concat([ML_df, pd.DataFrame([new_row])], ignore_index=True)
                 
         run = run + 1
         
-full_filename = os.path.join(OUTPUT_DIR, "ML_EEG_" + str (TIME_INTERVAL_DURATION) + ".csv")
+full_filename = os.path.join(OUTPUT_DIR, "EEG_all_" + str (TIME_INTERVAL_DURATION) + ".csv")
 ML_df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)

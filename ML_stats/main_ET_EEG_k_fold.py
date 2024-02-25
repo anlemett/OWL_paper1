@@ -10,22 +10,43 @@ from statistics import mean
 
 from sklearn import model_selection
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
+from sklearn.svm import SVC
 
-import matplotlib.pyplot as plt
+
+#import matplotlib.pyplot as plt
 
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = False
+BINARY = True
 EQUAL_PERCENTILES = False
 
+#LABEL = "Workload"
+LABEL = "Vigilance"
+#LABEL = "Stress"
+
+#MODEL = "LR"
+#MODEL = "DT"
+MODEL = "RF"
+#MODEL = "SVC"
+#MODEL = "HGBC"
+
+FEATURE_IMPORTANCE = False
 TIME_INTERVAL_DURATION = 60
 
-features = ['SaccadesNumber', 'SaccadesDuration',
-            'FixationNumber', 'FixationDuration']
+#saccade_fixation = ['SaccadesNumber', 'SaccadesTotalDuration',
+features = ['SaccadesNumber', 'SaccadesTotalDuration',
+            'SaccadesDurationMean', 'SaccadesDurationStd', 'SaccadesDurationMedian',
+            'SaccadesDurationMin', 'SaccadesDurationMax',
+            'FixationNumber', 'FixationTotalDuration',
+            'FixationDurationMean', 'FixationDurationStd', 'FixationDurationMedian',
+            'FixationDurationMin', 'FixationDurationMax',
+            ]
 
 old_features = [
             'LeftPupilDiameter', 'RightPupilDiameter',
@@ -36,11 +57,17 @@ old_features = [
             'HeadHeading', 'HeadPitch', 'HeadRoll']
 
 statistics = ['mean', 'std', 'min', 'max', 'median']
+'''
+features = []
 
+for feature in saccade_fixation:
+    features.append(feature)
+'''
 for feature in old_features:
     for stat in statistics:
         new_feature = feature + '_' + stat
         features.append(new_feature)
+
 
 np.random.seed(0)
 
@@ -65,7 +92,7 @@ def weight_classes(scores):
 
 def featurize_data(x_data):
     """
-    :param x_data: numpy array of shape
+    :param x_data: ngumpy array of shape
     (number_of_timeintervals, number_of_timestamps, number_of_features)
     where number_of_timestamps == TIME_INTERVAL_DURATION*250
 
@@ -75,11 +102,15 @@ def featurize_data(x_data):
     """
     print("Input shape before feature union:", x_data.shape)
 
-    mean = np.mean(x_data, axis=-2)
-    std = np.std(x_data, axis=-2)
-    median = np.median(x_data, axis=-2)
-    min = np.min(x_data, axis=-2)
-    max = np.max(x_data, axis=-2)
+    new_data = x_data[:,0,:14]
+    feature_to_featurize = x_data[:,:,14:]
+    #feature_to_featurize = x_data[:,:,16:] #exclude pupil diameter
+
+    mean = np.mean(feature_to_featurize, axis=-2)
+    std = np.std(feature_to_featurize, axis=-2)
+    median = np.median(feature_to_featurize, axis=-2)
+    min = np.min(feature_to_featurize, axis=-2)
+    max = np.max(feature_to_featurize, axis=-2)
 
     featurized_data = np.concatenate([
         mean,    
@@ -89,12 +120,9 @@ def featurize_data(x_data):
         median
     ], axis=-1)
 
-    saccades_data = featurized_data[:,4:6]
-    fixation_data = featurized_data[:,14:16]
-    rest_data = featurized_data[:,20:]
-    new_featurized_data = np.concatenate((saccades_data, fixation_data, rest_data), axis=1)
-    print("Shape after feature union, before classification:", new_featurized_data.shape)
-    return new_featurized_data
+    new_data = np.concatenate((new_data, featurized_data), axis=1)
+    print("Shape after feature union, before classification:", new_data.shape)
+    return new_data
 
 
 def main():
@@ -111,7 +139,7 @@ def main():
     if TIME_INTERVAL_DURATION == 180: 
         TS_np = TS_np.reshape((631, 45000, 15)) #old
     else: # 60
-        TS_np = TS_np.reshape((1731, 15000, 17))
+        TS_np = TS_np.reshape((1731, 15000, 27))
 
     
     full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
@@ -123,6 +151,14 @@ def main():
 
     print(TS_np.shape)
     print(scores_np.shape)
+    
+    if LABEL == "Workload":
+        scores_np = scores_np[0,:] # WL
+    elif LABEL == "Vigilance":
+        scores_np = scores_np[1,:] # Vigilance
+    else:
+        scores_np = scores_np[2,:] # Stress
+    
 
     zipped = list(zip(TS_np, scores_np))
 
@@ -140,7 +176,12 @@ def main():
         if EQUAL_PERCENTILES:
             th = eeg_series.quantile(.5)
         else:
-            th = eeg_series.quantile(.93)
+            if LABEL == "Workload":
+                th = eeg_series.quantile(.93)
+            elif LABEL == "Vigilance":
+                th = eeg_series.quantile(.1)
+            else: #Stress
+                th = eeg_series.quantile(.1)
         scores = [1 if score < th else 2 for score in scores]
 
     else:
@@ -152,7 +193,7 @@ def main():
             (th1, th2) = eeg_series.quantile([.52, .93])
         scores = [1 if score < th1 else 3 if score > th2 else 2 for score in scores]
 
-    print(scores)
+    #print(scores)
        
     number_of_classes = len(set(scores))
     print(f"Number of classes : {number_of_classes}")
@@ -161,7 +202,7 @@ def main():
     
     # Define the K-fold Cross Validator
     num_folds = 10
-    kfold = model_selection.KFold(n_splits=num_folds, shuffle=True)
+    kfold = model_selection.KFold(n_splits=num_folds, shuffle=False)
     
     # K-fold Cross Validation model evaluation
     
@@ -170,6 +211,8 @@ def main():
     prec_per_fold = []
     rec_per_fold = []
     f1_per_fold = []
+    
+    kfold_importances = np.empty(shape=[10, 79])
     
     fold_no = 1
     for train_idx, test_idx in kfold.split(scores):
@@ -182,60 +225,52 @@ def main():
         X_train_featurized = featurize_data(X_train)
         
         X_train_df = pd.DataFrame(X_train_featurized, columns = features)
-        
-        X_train_df = X_train_df[['RightBlinkClosingSpeed_mean',
-                               'HeadHeading_min',
-                               'HeadRoll_max',
-                               'SaccadesNumber',
-                               'LeftBlinkOpeningSpeed_mean']]
-        '''
-        
-        X_train_df = X_train_df[['RightBlinkClosingSpeed_mean',
-                                 'RightBlinkClosingSpeed_max',
-                                 'LeftBlinkClosingSpeed_std',
-                                 'HeadRoll_median',
-                                 'HeadHeading_max',
-                                 #'RightBlinkOpeningAmplitude_mean',
-                                 #'RightBlinkOpeningAmplitude_median'
-                                 ]]
-        
-        X_train_df = X_train_df[['RightBlinkClosingSpeed_mean',
-                                 'RightBlinkClosingSpeed_max',
-                                 'LeftBlinkClosingSpeed_std']]
-        '''
+
         ################################# Fit #####################################
+        if MODEL == "LR":
+            clf = LogisticRegression(class_weight=weight_dict)
+            clf.fit(X_train_df, y_train)
+        elif  MODEL == "DT":
+            clf = DecisionTreeClassifier(class_weight=weight_dict,
+                                         random_state=0)
+            clf.fit(X_train_df, y_train)
+        elif  MODEL == "RF":
+            if FEATURE_IMPORTANCE:
+                clf = RandomForestClassifier(class_weight=weight_dict,
+                                         #bootstrap=False,
+                                         max_features=79,
+                                         max_depth=79,
+                                         n_estimators=102,
+                                         random_state=0
+                                         )
+            else:
+                clf = RandomForestClassifier(#class_weight=weight_dict,
+                                         class_weight='balanced',
+                                         max_depth=39,
+                                         n_estimators=102,
+                                         random_state=0
+                                         )
 
-        classifier = RandomForestClassifier(class_weight=weight_dict)
-
-        classifier.fit(X_train_featurized, y_train)
-    
+            clf.fit(X_train_df, y_train)
+        
+            if FEATURE_IMPORTANCE:
+                fold_importances = clf.feature_importances_
+                kfold_importances[fold_no-1, :] = fold_importances
+        
+        elif MODEL == "SVC":
+            clf = SVC(class_weight=weight_dict)
+            clf.fit(X_train_df, y_train)
+        elif  MODEL == "HGBC":
+            clf = HistGradientBoostingClassifier(class_weight='balanced',
+                                                 random_state=0)
+            clf.fit(X_train_df, y_train)
         ############################## Predict ####################################
         
         X_test_featurized = featurize_data(X_test)
         
         X_test_df = pd.DataFrame(X_test_featurized, columns = features)
-        
-        X_test_df = X_test_df[['RightBlinkClosingSpeed_mean',
-                               'HeadHeading_min',
-                               'HeadRoll_max',
-                               'SaccadesNumber',
-                               'LeftBlinkOpeningSpeed_mean']]
-        '''
-        
-        X_test_df = X_test_df[['RightBlinkClosingSpeed_mean',
-                               'RightBlinkClosingSpeed_max',
-                               'LeftBlinkClosingSpeed_std',
-                               'HeadRoll_median',
-                               'HeadHeading_max',
-                               #'RightBlinkOpeningAmplitude_mean',
-                               #'RightBlinkOpeningAmplitude_median'
-                               ]]
-        
-        X_test_df = X_test_df[['RightBlinkClosingSpeed_mean',
-                                 'RightBlinkClosingSpeed_max',
-                                 'LeftBlinkClosingSpeed_std']]
-        '''
-        y_pred = classifier.predict(X_test_featurized)
+
+        y_pred = clf.predict(X_test_df)
         print("Shape at output after classification:", y_pred.shape)
     
         ############################ Evaluate #####################################
@@ -270,6 +305,16 @@ def main():
     
     print(mean(acc_per_fold))
     print(mean(f1_per_fold))
+    
+    if FEATURE_IMPORTANCE:
+        importances_mean = np.mean(kfold_importances, axis=0)
+        
+        importances_df = pd.DataFrame()
+        importances_df['feature'] = features
+        importances_df['importance'] = importances_mean
+    
+        importances_df.sort_values(by=['importance'], ascending=False,inplace=True)
+        importances_df.to_csv("forest_importances.csv", sep=',', header=True, index=False)
 
 start_time = time.time()
 
