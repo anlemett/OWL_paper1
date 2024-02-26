@@ -15,7 +15,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
 from sklearn.svm import SVC
 
-
+from sklearn.inspection import permutation_importance
 #import matplotlib.pyplot as plt
 
 DATA_DIR = os.path.join("..", "..")
@@ -36,10 +36,9 @@ MODEL = "RF"
 #MODEL = "SVC"
 #MODEL = "HGBC"
 
-FEATURE_IMPORTANCE = False
+FEATURE_IMPORTANCE = True
 TIME_INTERVAL_DURATION = 60
 
-#saccade_fixation = ['SaccadesNumber', 'SaccadesTotalDuration',
 features = ['SaccadesNumber', 'SaccadesTotalDuration',
             'SaccadesDurationMean', 'SaccadesDurationStd', 'SaccadesDurationMedian',
             'SaccadesDurationMin', 'SaccadesDurationMax',
@@ -57,14 +56,9 @@ old_features = [
             'HeadHeading', 'HeadPitch', 'HeadRoll']
 
 statistics = ['mean', 'std', 'min', 'max', 'median']
-'''
-features = []
 
-for feature in saccade_fixation:
-    features.append(feature)
-'''
-for feature in old_features:
-    for stat in statistics:
+for stat in statistics:
+    for feature in old_features:
         new_feature = feature + '_' + stat
         features.append(new_feature)
 
@@ -98,14 +92,15 @@ def featurize_data(x_data):
 
     :return: featurized numpy array of shape
     (number_of_timeintervals, number_of_new_features)
-    where number_of_new_features = 5*number_of_features
     """
     print("Input shape before feature union:", x_data.shape)
-
+    
     new_data = x_data[:,0,:14]
+    print(new_data.shape)
+    
     feature_to_featurize = x_data[:,:,14:]
     #feature_to_featurize = x_data[:,:,16:] #exclude pupil diameter
-
+    
     mean = np.mean(feature_to_featurize, axis=-2)
     std = np.std(feature_to_featurize, axis=-2)
     median = np.median(feature_to_featurize, axis=-2)
@@ -236,11 +231,17 @@ def main():
             clf.fit(X_train_df, y_train)
         elif  MODEL == "RF":
             if FEATURE_IMPORTANCE:
+                if LABEL == "Workload":
+                    md = 73
+                    ne = 267
+                elif LABEL == "Vigilance":
+                    md = 5
+                    ne = 465
                 clf = RandomForestClassifier(class_weight=weight_dict,
-                                         #bootstrap=False,
-                                         max_features=79,
-                                         max_depth=79,
-                                         n_estimators=102,
+                                         bootstrap=False,
+                                         max_features=None,
+                                         max_depth=md,
+                                         n_estimators=ne,
                                          random_state=0
                                          )
             else:
@@ -252,10 +253,6 @@ def main():
                                          )
 
             clf.fit(X_train_df, y_train)
-        
-            if FEATURE_IMPORTANCE:
-                fold_importances = clf.feature_importances_
-                kfold_importances[fold_no-1, :] = fold_importances
         
         elif MODEL == "SVC":
             clf = SVC(class_weight=weight_dict)
@@ -273,8 +270,19 @@ def main():
         y_pred = clf.predict(X_test_df)
         print("Shape at output after classification:", y_pred.shape)
     
-        ############################ Evaluate #####################################
     
+        if MODEL == "RF":
+            if FEATURE_IMPORTANCE:
+                fold_importances = clf.feature_importances_
+                kfold_importances[fold_no-1, :] = fold_importances
+                '''
+                fold_importances = permutation_importance(
+                    clf, X_test_df, y_test, n_repeats=10, random_state=0, n_jobs=2
+                    )
+                kfold_importances[fold_no-1, :] = fold_importances.importances_mean
+                '''
+        ############################ Evaluate #####################################
+        
         accuracy = accuracy_score(y_pred=y_pred, y_true=y_test)
     
         if BINARY:
@@ -289,6 +297,9 @@ def main():
         print("Precision: ", precision)
         print("Recall: ", recall)
         print("F1-score:", f1)
+        
+        #print(f"RF train accuracy: {clf.score(X_train_df, y_train):.3f}")
+        #print(f"RF test accuracy: {clf.score(X_test_df, y_test):.3f}")
         
         acc_per_fold.append(accuracy)
         prec_per_fold.append(precision)
@@ -315,6 +326,8 @@ def main():
     
         importances_df.sort_values(by=['importance'], ascending=False,inplace=True)
         importances_df.to_csv("forest_importances.csv", sep=',', header=True, index=False)
+        
+        
 
 start_time = time.time()
 

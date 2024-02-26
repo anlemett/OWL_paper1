@@ -18,10 +18,14 @@ rf = pickle.load(open(filename, 'rb'))
 #features3 = ['RightBlinkClosingSpeed_mean',
 #             'RightBlinkClosingSpeed_max',
 #             'LeftBlinkClosingSpeed_std']
-features3 = ['RightPupilDiameter_min',
-            'LeftPupilDiameter_max',
-            'RightBlinkClosingSpeed_median']
+#features3 = ['RightPupilDiameter_min',
+#            'LeftPupilDiameter_max',
+#            'RightBlinkClosingSpeed_median']
     
+features3 = ['RightBlinkOpeningAmplitude_mean',
+             'HeadRoll_median',
+             'HeadPitch_min']
+
 classes = ["low", "high"]
 print(rf.classes_) #[1 2]
 

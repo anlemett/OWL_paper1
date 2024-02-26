@@ -13,7 +13,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
 from sklearn.svm import SVC
 
-from sklearn.model_selection import RandomizedSearchCV, train_test_split
+from sklearn.model_selection import RandomizedSearchCV, GridSearchCV, train_test_split
 from scipy.stats import randint
 
 #import matplotlib.pyplot as plt
@@ -57,8 +57,8 @@ old_features = [
 
 statistics = ['mean', 'std', 'min', 'max', 'median']
 
-for feature in old_features:
-    for stat in statistics:
+for stat in statistics:
+    for feature in old_features:
         new_feature = feature + '_' + stat
         features.append(new_feature)
 
@@ -92,13 +92,14 @@ def featurize_data(x_data):
 
     :return: featurized numpy array of shape
     (number_of_timeintervals, number_of_new_features)
-    where number_of_new_features = 5*number_of_features
     """
     print("Input shape before feature union:", x_data.shape)
-
+    
     new_data = x_data[:,0,:14]
+
     feature_to_featurize = x_data[:,:,14:]
     #feature_to_featurize = x_data[:,:,16:] #exclude pupil diameter
+    
     mean = np.mean(feature_to_featurize, axis=-2)
     std = np.std(feature_to_featurize, axis=-2)
     median = np.median(feature_to_featurize, axis=-2)
@@ -222,27 +223,36 @@ def main():
         clf = DecisionTreeClassifier(class_weight=weight_dict)
         clf.fit(X_train_df, y_train)
     elif  MODEL == "RF":
-        clf = RandomForestClassifier(class_weight=weight_dict, random_state=0)
-        
-        param_dist = {'n_estimators': randint(50,500),
-             'max_depth': randint(1,79)}
+        clf = RandomForestClassifier(class_weight=weight_dict,
+                                     bootstrap=False,
+                                     max_features=None,
+                                     random_state=0)
         
         # Use random search to find the best hyperparameters
-        rand_search = RandomizedSearchCV(clf, 
+        param_dist = {'n_estimators': randint(50,500),
+             'max_depth': randint(1,79),
+             }
+        
+        search = RandomizedSearchCV(clf, 
                                 param_distributions = param_dist, 
                                 n_iter=5, 
                                 cv=10)
-
-        # Fit the random search object to the data
-        rand_search.fit(X_train_df, y_train)   
+        '''
+        param_grid = {'n_estimators': np.arange(100, 150, dtype=int),
+             'max_depth': np.arange(1, 79, dtype=int),
+             }
+        search = GridSearchCV(clf, param_grid=param_grid, cv=10)
+        '''
+        # Fit the search object to the data
+        search.fit(X_train_df, y_train)
  
         # Create a variable for the best model
-        best_rf = rand_search.best_estimator_
+        best_rf = search.best_estimator_
 
         # Print the best hyperparameters
-        print('Best hyperparameters:',  rand_search.best_params_)
-        #{'max_depth': 39, 'n_estimators': 102}
-        
+        print('Best hyperparameters:',  search.best_params_)
+        #WL: {'max_depth': 73, 'n_estimators': 267}
+        #Vigilance: {'max_depth': 5, 'n_estimators': 465}
         
         
     elif MODEL == "SVC":

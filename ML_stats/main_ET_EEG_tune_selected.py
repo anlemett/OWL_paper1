@@ -34,7 +34,7 @@ MODEL = "RF"
 #MODEL = "SVC"
 #MODEL = "HGBC"
 
-VISUALIZE = False
+VISUALIZE = True
 
 TIME_INTERVAL_DURATION = 60
 
@@ -57,29 +57,30 @@ old_features = [
 
 statistics = ['mean', 'std', 'min', 'max', 'median']
 
-for feature in old_features:
-    for stat in statistics:
+for stat in statistics:
+    for feature in old_features:
         new_feature = feature + '_' + stat
         features.append(new_feature)
-        
+
+
 blinks_head = []
 blinks_head_old = old_features[2:]
-for feature in blinks_head_old:
-    for stat in statistics:
+for stat in statistics: 
+    for feature in blinks_head_old:
         new_feature = feature + '_' + stat
         blinks_head.append(new_feature)
 
 blinks = []
 blinks_old  = old_features[2:10]
-for feature in blinks_old:
-    for stat in statistics:
+for stat in statistics:
+    for feature in blinks_old:
         new_feature = feature + '_' + stat
         blinks.append(new_feature)
 
 head = []
 head_old = old_features[10:]
-for feature in head_old:
-    for stat in statistics:
+for stat in statistics:
+    for feature in head_old:
         new_feature = feature + '_' + stat
         head.append(new_feature)
 
@@ -113,13 +114,15 @@ def featurize_data(x_data):
 
     :return: featurized numpy array of shape
     (number_of_timeintervals, number_of_new_features)
-    where number_of_new_features = 5*number_of_features
     """
     print("Input shape before feature union:", x_data.shape)
-
+    
     new_data = x_data[:,0,:14]
+    print(new_data.shape)
+
     feature_to_featurize = x_data[:,:,14:]
     #feature_to_featurize = x_data[:,:,16:] #exclude pupil diameter
+    
     mean = np.mean(feature_to_featurize, axis=-2)
     std = np.std(feature_to_featurize, axis=-2)
     median = np.median(feature_to_featurize, axis=-2)
@@ -233,24 +236,13 @@ def main():
     
     X_train_df = pd.DataFrame(X_train_featurized, columns = features)
     
-    selected_features = [#'RightPupilDiameter_min',
-                         #'LeftPupilDiameter_max',
-                         #'RightBlinkOpeningSpeed_min',
-                         #'RightBlinkClosingSpeed_median',
-                         #'RightBlinkClosingAmplitude_max',
-                         #'HeadPitch_median',
-                         #'HeadRoll_median',
-                         #'HeadHeading_max',
-                         #'HeadHeading_min',
-                         #'HeadRoll_median',
-                         #'LeftPupilDiameter_std',
-                         'LeftBlinkClosingSpeed_std',
-                         'LeftBlinkOpeningAmplitude_min',
-                         'HeadPitch_max',
-                         #'RightBlinkClosingSpeed_max'
+    selected_features = [
+                         'RightBlinkOpeningAmplitude_mean',
+                         'HeadRoll_median',
+                         'HeadPitch_min',
                          ]
 
-    selected_features = saccade_fixation
+    #selected_features = saccade_fixation
     #selected_features = blinks_head
     #selected_features = blinks
     #selected_features = head

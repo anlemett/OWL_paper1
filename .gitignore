@@ -2,6 +2,7 @@ __pycache__/
 Plots/.ipynb_checkpoints/*
 Test/*
 *.csv
+*.xlsx
 *.sav
 *.txt
 *.iml

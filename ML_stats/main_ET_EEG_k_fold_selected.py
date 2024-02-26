@@ -51,8 +51,8 @@ old_features = [
 
 statistics = ['mean', 'std', 'min', 'max', 'median']
 
-for feature in old_features:
-    for stat in statistics:
+for stat in statistics:
+    for feature in old_features:
         new_feature = feature + '_' + stat
         features.append(new_feature)
 
@@ -85,13 +85,14 @@ def featurize_data(x_data):
 
     :return: featurized numpy array of shape
     (number_of_timeintervals, number_of_new_features)
-    where number_of_new_features = 5*number_of_features
     """
     print("Input shape before feature union:", x_data.shape)
-
+    
     new_data = x_data[:,0,:14]
+
     feature_to_featurize = x_data[:,:,14:]
     #feature_to_featurize = x_data[:,:,16:] #exclude pupil diameter
+    
     mean = np.mean(feature_to_featurize, axis=-2)
     std = np.std(feature_to_featurize, axis=-2)
     median = np.median(feature_to_featurize, axis=-2)
@@ -205,28 +206,17 @@ def main():
         #Right Pupil Diameter minimum,
         #Left Pupil Diameter maximum,
         #Right Blink Closing Speed median
-        selected_features = ['RightPupilDiameter_min',
-                             'LeftPupilDiameter_max',
-                             #'RightBlinkOpeningSpeed_min',
-                             'RightBlinkClosingSpeed_median',
-                             #'RightBlinkClosingAmplitude_max',
-                             #'HeadPitch_median',
-                             #'HeadRoll_median',
-                             #'HeadHeading_max',
-                             #'HeadHeading_min',
-                             #'HeadRoll_median',
-                             #'LeftPupilDiameter_std',
-                             #'LeftBlinkClosingAmplitude_min'
-                             #'RightBlinkClosingSpeed_max',
-                             #'LeftBlinkClosingSpeed_std',
-                             #'LeftBlinkOpeningAmplitude_min',
-                             #'HeadPitch_max',
+        selected_features = [
+                             'RightBlinkOpeningAmplitude_mean',
+                             'HeadRoll_median',
+                             'HeadPitch_min',
                              ]
         X_train_df = X_train_df[selected_features]
         
         ################################# Fit #####################################
 
-        classifier = RandomForestClassifier(class_weight=weight_dict)
+        classifier = RandomForestClassifier(class_weight=weight_dict,
+                                            random_state=0)
 
         classifier.fit(X_train_df, y_train)
     
