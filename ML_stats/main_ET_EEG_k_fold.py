@@ -26,8 +26,8 @@ FIG_DIR = os.path.join(".", "Figures")
 BINARY = True
 EQUAL_PERCENTILES = False
 
-#LABEL = "Workload"
-LABEL = "Vigilance"
+LABEL = "Workload"
+#LABEL = "Vigilance"
 #LABEL = "Stress"
 
 #MODEL = "LR"
@@ -39,7 +39,8 @@ MODEL = "RF"
 FEATURE_IMPORTANCE = True
 TIME_INTERVAL_DURATION = 60
 
-features = ['SaccadesNumber', 'SaccadesTotalDuration',
+saccade_fixation = [
+            'SaccadesNumber', 'SaccadesTotalDuration',
             'SaccadesDurationMean', 'SaccadesDurationStd', 'SaccadesDurationMedian',
             'SaccadesDurationMin', 'SaccadesDurationMax',
             'FixationNumber', 'FixationTotalDuration',
@@ -57,10 +58,21 @@ old_features = [
 
 statistics = ['mean', 'std', 'min', 'max', 'median']
 
+features = []
+for feature in saccade_fixation:
+    features.append(feature)
 for stat in statistics:
     for feature in old_features:
         new_feature = feature + '_' + stat
         features.append(new_feature)
+
+occular_features = []
+for feature in saccade_fixation:
+    occular_features.append(feature)
+for stat in statistics:
+    for feature in old_features[:10]:
+        new_feature = feature + '_' + stat
+        occular_features.append(new_feature)
 
 
 np.random.seed(0)
@@ -197,7 +209,9 @@ def main():
     
     # Define the K-fold Cross Validator
     num_folds = 10
-    kfold = model_selection.KFold(n_splits=num_folds, shuffle=False)
+
+    #kfold = model_selection.KFold(n_splits=num_folds, shuffle=False)
+    kfold = model_selection.StratifiedKFold(n_splits=num_folds, shuffle=False)
     
     # K-fold Cross Validation model evaluation
     
@@ -207,10 +221,21 @@ def main():
     rec_per_fold = []
     f1_per_fold = []
     
-    kfold_importances = np.empty(shape=[10, 79])
+    if FEATURE_IMPORTANCE:
+        gini_kfold_importances = np.empty(shape=[10, 79])
+        perm_kfold_importances = np.empty(shape=[10, 79])
+    
+    #occular:
+    #gini_kfold_importances = np.empty(shape=[10, 64])
+    #perm_kfold_importances = np.empty(shape=[10, 64])
+
+    #saccade_fixation:
+    #gini_kfold_importances = np.empty(shape=[10, 14])
+    #perm_kfold_importances = np.empty(shape=[10, 14])
     
     fold_no = 1
-    for train_idx, test_idx in kfold.split(scores):
+    #for train_idx, test_idx in kfold.split(scores):
+    for train_idx, test_idx in kfold.split(TS_np, scores):
     
         X_train = np.array(TS_np)[train_idx.astype(int)]
         y_train = np.array(scores)[train_idx.astype(int)]
@@ -220,7 +245,15 @@ def main():
         X_train_featurized = featurize_data(X_train)
         
         X_train_df = pd.DataFrame(X_train_featurized, columns = features)
-
+        
+        #X_train_df = X_train_df[occular_features]
+        #X_train_df = X_train_df[saccade_fixation]
+        
+        '''
+        cols = list(X_train_df.columns)
+        cols.reverse()
+        X_train_df[cols]
+        '''
         ################################# Fit #####################################
         if MODEL == "LR":
             clf = LogisticRegression(class_weight=weight_dict)
@@ -237,18 +270,19 @@ def main():
                 elif LABEL == "Vigilance":
                     md = 5
                     ne = 465
-                clf = RandomForestClassifier(class_weight=weight_dict,
+                clf = RandomForestClassifier(
+                                         class_weight='balanced',
                                          bootstrap=False,
                                          max_features=None,
-                                         max_depth=md,
-                                         n_estimators=ne,
+                                         #max_depth=md,
+                                         #n_estimators=ne,
                                          random_state=0
                                          )
             else:
-                clf = RandomForestClassifier(#class_weight=weight_dict,
+                clf = RandomForestClassifier(
                                          class_weight='balanced',
-                                         max_depth=39,
-                                         n_estimators=102,
+                                         max_depth=md,
+                                         n_estimators=ne,
                                          random_state=0
                                          )
 
@@ -266,6 +300,15 @@ def main():
         X_test_featurized = featurize_data(X_test)
         
         X_test_df = pd.DataFrame(X_test_featurized, columns = features)
+        
+        #X_test_df = X_test_df[occular_features]
+        #X_test_df = X_test_df[saccade_fixation]
+        
+        '''
+        cols = list(X_test_df.columns)
+        cols.reverse()
+        X_test_df[cols]
+        '''
 
         y_pred = clf.predict(X_test_df)
         print("Shape at output after classification:", y_pred.shape)
@@ -273,14 +316,14 @@ def main():
     
         if MODEL == "RF":
             if FEATURE_IMPORTANCE:
-                fold_importances = clf.feature_importances_
-                kfold_importances[fold_no-1, :] = fold_importances
-                '''
-                fold_importances = permutation_importance(
+                gini_fold_importances = clf.feature_importances_
+                gini_kfold_importances[fold_no-1, :] = gini_fold_importances
+                
+                perm_fold_importances = permutation_importance(
                     clf, X_test_df, y_test, n_repeats=10, random_state=0, n_jobs=2
                     )
-                kfold_importances[fold_no-1, :] = fold_importances.importances_mean
-                '''
+                perm_kfold_importances[fold_no-1, :] = perm_fold_importances.importances_mean
+                
         ############################ Evaluate #####################################
         
         accuracy = accuracy_score(y_pred=y_pred, y_true=y_test)
@@ -318,15 +361,27 @@ def main():
     print(mean(f1_per_fold))
     
     if FEATURE_IMPORTANCE:
-        importances_mean = np.mean(kfold_importances, axis=0)
+        importances_mean = np.mean(gini_kfold_importances, axis=0)
         
         importances_df = pd.DataFrame()
         importances_df['feature'] = features
+        #importances_df['feature'] = occular_features
+        #importances_df['feature'] = saccade_fixation
         importances_df['importance'] = importances_mean
     
         importances_df.sort_values(by=['importance'], ascending=False,inplace=True)
-        importances_df.to_csv("forest_importances.csv", sep=',', header=True, index=False)
+        importances_df.to_csv("forest_importances_gini.csv", sep=',', header=True, index=False)
         
+        importances_mean = np.mean(perm_kfold_importances, axis=0)
+        
+        importances_df = pd.DataFrame()
+        importances_df['feature'] = features
+        #importances_df['feature'] = occular_features
+        #importances_df['feature'] = saccade_fixation
+        importances_df['importance'] = importances_mean
+    
+        importances_df.sort_values(by=['importance'], ascending=False,inplace=True)
+        importances_df.to_csv("forest_importances_perm.csv", sep=',', header=True, index=False)
         
 
 start_time = time.time()

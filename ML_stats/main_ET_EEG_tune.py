@@ -39,7 +39,8 @@ LABEL = "Workload"
 
 TIME_INTERVAL_DURATION = 60
 
-features = ['SaccadesNumber', 'SaccadesTotalDuration',
+saccade_fixation = [
+            'SaccadesNumber', 'SaccadesTotalDuration',
             'SaccadesDurationMean', 'SaccadesDurationStd', 'SaccadesDurationMedian',
             'SaccadesDurationMin', 'SaccadesDurationMax',
             'FixationNumber', 'FixationTotalDuration',
@@ -57,10 +58,21 @@ old_features = [
 
 statistics = ['mean', 'std', 'min', 'max', 'median']
 
+features = []
+for feature in saccade_fixation:
+    features.append(feature)
 for stat in statistics:
     for feature in old_features:
         new_feature = feature + '_' + stat
         features.append(new_feature)
+
+occular_features = []
+for feature in saccade_fixation:
+    occular_features.append(feature)
+for stat in statistics:
+    for feature in old_features[:10]:
+        new_feature = feature + '_' + stat
+        occular_features.append(new_feature)
 
 np.random.seed(0)
 
