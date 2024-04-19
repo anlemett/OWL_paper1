@@ -57,9 +57,9 @@ for atco in filenames:
         full_filename = os.path.join(INPUT_DIR, filename +  ".csv")
         df = pd.read_csv(full_filename, sep=' ')
     
-        df['WL'] = df.apply(lambda row: normilize(atco_wl_min, atco_wl_max, row['workload']), axis=1)
-        df['Vigilance'] = df.apply(lambda row: normilize(atco_vig_min, atco_vig_max, row['vigilance']), axis=1)
-        df['Stress'] = df.apply(lambda row: normilize(atco_stress_min, atco_stress_max, row['stress']), axis=1)
+        df['workload'] = df.apply(lambda row: normilize(atco_wl_min, atco_wl_max, row['workload']), axis=1)
+        df['vigilance'] = df.apply(lambda row: normilize(atco_vig_min, atco_vig_max, row['vigilance']), axis=1)
+        df['stress'] = df.apply(lambda row: normilize(atco_stress_min, atco_stress_max, row['stress']), axis=1)
     
         full_filename = os.path.join(OUTPUT_DIR, filename +  ".csv")
         df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)

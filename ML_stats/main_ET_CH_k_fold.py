@@ -10,19 +10,36 @@ from statistics import mean
 
 from sklearn import model_selection
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
+from sklearn.svm import SVC
 
-import matplotlib.pyplot as plt
+from sklearn import preprocessing
+
 
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = True
+BINARY = False
 
-features = ['SaccadesNumber', 'SaccadesDuration',
-            'FixationNumber', 'FixationDuration']
+#MODEL = "LR"
+#MODEL = "DT"
+#MODEL = "RF"
+#MODEL = "SVC"
+MODEL = "HGBC"
+
+saccade_fixation = [
+            'SaccadesNumber', 'SaccadesTotalDuration',
+            'SaccadesDurationMean', 'SaccadesDurationStd', 'SaccadesDurationMedian',
+            'SaccadesDurationMin', 'SaccadesDurationMax',
+            'FixationNumber', 'FixationTotalDuration',
+            'FixationDurationMean', 'FixationDurationStd', 'FixationDurationMedian',
+            'FixationDurationMin', 'FixationDurationMax',
+            ]
+
 old_features = [
             'LeftPupilDiameter', 'RightPupilDiameter',
             'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
@@ -33,8 +50,11 @@ old_features = [
 
 statistics = ['mean', 'std', 'min', 'max', 'median']
 
-for feature in old_features:
-    for stat in statistics:
+features = []
+for feature in saccade_fixation:
+    features.append(feature)
+for stat in statistics:
+    for feature in old_features:
         new_feature = feature + '_' + stat
         features.append(new_feature)
 
@@ -50,7 +70,7 @@ def weight_classes(scores):
             vals_dict[i] = 1
     total = sum(vals_dict.values())
 
-    # Formula used - Naive method where
+    # Formula used:
     # weight = 1 - (no. of samples present / total no. of samples)
     # So more the samples, lower the weight
 
@@ -58,6 +78,7 @@ def weight_classes(scores):
     print(weight_dict)
         
     return weight_dict
+
 
 def featurize_data(x_data):
     """
@@ -67,15 +88,20 @@ def featurize_data(x_data):
 
     :return: featurized numpy array of shape
     (number_of_timeintervals, number_of_new_features)
-    where number_of_new_features = 5*number_of_features
     """
     print("Input shape before feature union:", x_data.shape)
-
-    mean = np.mean(x_data, axis=-2)
-    std = np.std(x_data, axis=-2)
-    median = np.median(x_data, axis=-2)
-    min = np.min(x_data, axis=-2)
-    max = np.max(x_data, axis=-2)
+    
+    new_data = x_data[:,0,:14]
+    print(new_data.shape)
+    
+    feature_to_featurize = x_data[:,:,14:]
+    #feature_to_featurize = x_data[:,:,16:] #exclude pupil diameter
+    
+    mean = np.mean(feature_to_featurize, axis=-2)
+    std = np.std(feature_to_featurize, axis=-2)
+    median = np.median(feature_to_featurize, axis=-2)
+    min = np.min(feature_to_featurize, axis=-2)
+    max = np.max(feature_to_featurize, axis=-2)
 
     featurized_data = np.concatenate([
         mean,    
@@ -83,14 +109,11 @@ def featurize_data(x_data):
         min,     
         max, 
         median
-        ], axis=-1)
+    ], axis=-1)
 
-    saccades_data = featurized_data[:,4:6]
-    fixation_data = featurized_data[:,14:16]
-    rest_data = featurized_data[:,20:]
-    new_featurized_data = np.concatenate((saccades_data, fixation_data, rest_data), axis=1)
-    print("Shape after feature union, before classification:", new_featurized_data.shape)
-    return new_featurized_data
+    new_data = np.concatenate((new_data, featurized_data), axis=1)
+    print("Shape after feature union, before classification:", new_data.shape)
+    return new_data
 
 
 def main():
@@ -103,8 +126,9 @@ def main():
 
     # Reshape the 2D array back to its original 3D shape
     # (number_of_timeintervals, 180*250, number_of_features)
-    # (667, 45000, 17)
-    TS_np = TS_np.reshape((667, 45000, 17))
+    # (667, 45000, 27)
+    TS_np = TS_np.reshape((667, 45000, 27))
+    print(TS_np[1,1,:])
 
     full_filename = os.path.join(ML_DIR, "ML_ET_CH__CH.csv")
 
@@ -159,40 +183,52 @@ def main():
         X_test = np.array(TS_np)[test_idx.astype(int)]
         y_test = np.array(scores)[test_idx.astype(int)]
         
+        #normalize train set
+        scaler = preprocessing.MinMaxScaler()
+        X_train_shape = X_train.shape    # save the shape
+        X_train = X_train.reshape(-1, X_train_shape[2])
+        scaler.fit(X_train)
+        X_train = scaler.transform(X_train)
+        X_train = X_train.reshape(X_train_shape)    # restore the shape
+        
+        #normalize test set
+        X_test_shape = X_test.shape    # save the shape
+        X_test = X_test.reshape(-1, X_test_shape[2])
+        X_test = scaler.transform(X_test)
+        X_test = X_test.reshape(X_test_shape)    # restore the shape
+        
+        
         X_train_featurized = featurize_data(X_train)
         
         X_train_df = pd.DataFrame(X_train_featurized, columns = features)
         
-        '''
-        X_train_df = X_train_df[['HeadHeading_min', 'SaccadesNumber',
-                                 'LeftBlinkClosingAmplitude_mean',
-                                 'LeftBlinkOpeningAmplitude_max',
-                                 'RightBlinkOpeningAmplitude_median',
-                                 #'RightBlinkClosingSpeed_max',
-                                 #'HeadRoll_max',
-                                 #'RightPupilDiameter_mean'
-                                 ]]
-        '''
-        '''
-        X_train_df = X_train_df[['FixationDuration', 'SaccadesDuration',
-                                 'HeadRoll_max',
-                                 'LeftBlinkOpeningSpeed_median',
-                                 'LeftPupilDiameter_min'
-                                 ]]
-        '''
-        X_train_df = X_train_df[['FixationDuration', 
-                                 'HeadRoll_max',
-                                 'LeftBlinkOpeningSpeed_median'
-                                 ]]
         
         ################################# Fit #####################################
 
-        classifier = RandomForestClassifier(
-            class_weight=weight_dict,
-            max_depth=9
-            )
+        if MODEL == "LR":
+            clf = LogisticRegression(class_weight=weight_dict)
+            clf.fit(X_train_df, y_train)
+        elif  MODEL == "DT":
+            clf = DecisionTreeClassifier(class_weight=weight_dict,
+                                         random_state=0)
+            clf.fit(X_train_df, y_train)
+        elif  MODEL == "RF":
+            clf = RandomForestClassifier(
+                                         class_weight='balanced',
+                                         #max_depth=md,
+                                         #n_estimators=ne,
+                                         random_state=0
+                                         )
 
-        classifier.fit(X_train_df, y_train)
+            clf.fit(X_train_df, y_train)
+        
+        elif MODEL == "SVC":
+            clf = SVC(class_weight=weight_dict)
+            clf.fit(X_train_df, y_train)
+        elif  MODEL == "HGBC":
+            clf = HistGradientBoostingClassifier(class_weight='balanced',
+                                                 random_state=0)
+            clf.fit(X_train_df, y_train)
     
         ############################## Predict ####################################
         
@@ -200,29 +236,7 @@ def main():
         
         X_test_df = pd.DataFrame(X_test_featurized, columns = features)
         
-        '''
-        X_test_df = X_test_df[['HeadHeading_min', 'SaccadesNumber',
-                               'LeftBlinkClosingAmplitude_mean',
-                               'LeftBlinkOpeningAmplitude_max',
-                               'RightBlinkOpeningAmplitude_median',
-                               #'RightBlinkClosingSpeed_max',
-                               #'HeadRoll_max',
-                               #'RightPupilDiameter_mean'
-                               ]]
-        '''
-        '''
-        X_test_df = X_test_df[['FixationDuration', 'SaccadesDuration',
-                                 'HeadRoll_max',
-                                 'LeftBlinkOpeningSpeed_median',
-                                 'LeftPupilDiameter_min'
-                                 ]]
-        '''
-        X_test_df = X_test_df[['FixationDuration', 
-                                 'HeadRoll_max',
-                                 'LeftBlinkOpeningSpeed_median'
-                                 ]]
-
-        y_pred = classifier.predict(X_test_df)
+        y_pred = clf.predict(X_test_df)
         print("Shape at output after classification:", y_pred.shape)
     
         ############################ Evaluate #####################################

@@ -3,12 +3,10 @@ warnings.filterwarnings('ignore')
 
 import os
 import pandas as pd
-import numpy as np
 import math
 import statistics
 #import sys
-
-from sklearn import preprocessing
+#from sklearn import preprocessing
 
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
@@ -16,7 +14,8 @@ ET_DIR = os.path.join(DATA_DIR, "EyeTracking3")
 CH_DIR = os.path.join(DATA_DIR, "CH1")
 OUTPUT_DIR = os.path.join(DATA_DIR, "EyeTracking4")
 
-TIME_INTERVAL_DURATION = 60  #sec
+#TIME_INTERVAL_DURATION = 60  #sec
+TIME_INTERVAL_DURATION = 180  #sec
 
 filenames = [["D1r1_MO", "D1r2_MO", "D1r3_MO"],
              ["D1r4_EI", "D1r5_EI", "D1r6_EI"],
@@ -231,7 +230,9 @@ for atco in filenames:
         atco_df = pd.concat([atco_df, df], ignore_index=True)
     
     #####################################
-    #scale the values
+    # Normalization per ATCO 
+    # might cause data leakage
+    '''
     scaler = preprocessing.MinMaxScaler()
 
     for feature in new_features:
@@ -239,6 +240,7 @@ for atco in filenames:
         scaled_feature_lst = scaler.fit_transform(np.asarray(feature_lst).reshape(-1, 1))
         atco_df = atco_df.drop(feature, axis = 1)
         atco_df[feature] = scaled_feature_lst
+    '''
     #####################################
     
     TI_df = pd.concat([TI_df, atco_df], ignore_index=True)

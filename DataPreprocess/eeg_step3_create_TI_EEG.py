@@ -9,7 +9,8 @@ from statistics import mean, median
 
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
-EEG_DIR = os.path.join(DATA_DIR, "EEG3")
+#EEG_DIR = os.path.join(DATA_DIR, "EEG3") #normalized data
+EEG_DIR = os.path.join(DATA_DIR, "EEG2") #raw data
 CH_DIR = os.path.join(DATA_DIR, "CH1")
 OUTPUT_DIR = os.path.join(DATA_DIR, "EEG4")
 
@@ -81,12 +82,12 @@ for atco in filenames:
                  ti_stress_mean = None
                  ti_stress_median = None
             else:
-                ti_wl_mean = mean(ti_df.dropna()['WL'].tolist())
-                ti_wl_median = median(ti_df.dropna()['WL'].tolist())
-                ti_vig_mean = mean(ti_df.dropna()['Vigilance'].tolist())
-                ti_vig_median = median(ti_df.dropna()['Vigilance'].tolist())
-                ti_stress_mean = mean(ti_df.dropna()['Stress'].tolist())
-                ti_stress_median = median(ti_df.dropna()['Stress'].tolist())
+                ti_wl_mean = mean(ti_df.dropna()['workload'].tolist())
+                ti_wl_median = median(ti_df.dropna()['workload'].tolist())
+                ti_vig_mean = mean(ti_df.dropna()['vigilance'].tolist())
+                ti_vig_median = median(ti_df.dropna()['vigilance'].tolist())
+                ti_stress_mean = mean(ti_df.dropna()['stress'].tolist())
+                ti_stress_median = median(ti_df.dropna()['stress'].tolist())
 
                 
             new_row = {'ATCO': filename[-2:], 'Run': run, 'timeInterval': ti,

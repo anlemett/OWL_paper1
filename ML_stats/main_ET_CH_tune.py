@@ -6,10 +6,17 @@ import os
 import numpy as np
 #import sys
 
-from sklearn.model_selection import RandomizedSearchCV, train_test_split
+from sklearn.model_selection import RandomizedSearchCV #, train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
+from sklearn.svm import SVC
+
 from scipy.stats import randint
+
+from sklearn.model_selection import ShuffleSplit
+from sklearn import preprocessing
 
 #import matplotlib.pyplot as plt
 
@@ -18,7 +25,15 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
+RANDOM_STATE = 0
+
 BINARY = True
+
+MODEL = "LR"
+#MODEL = "DT"
+#MODEL = "RF"
+#MODEL = "SVC"
+#MODEL = "HGBC"
 
 features = ['SaccadesNumber', 'SaccadesTotalDuration',
             'SaccadesDurationMean', 'SaccadesDurationStd', 'SaccadesDurationMedian',
@@ -58,7 +73,7 @@ def weight_classes(scores):
             vals_dict[i] = 1
     total = sum(vals_dict.values())
 
-    # Formula used - Naive method where
+    # Formula used:
     # weight = 1 - (no. of samples present / total no. of samples)
     # So more the samples, lower the weight
 
@@ -80,8 +95,8 @@ def featurize_data(x_data):
     """
     print("Input shape before feature union:", x_data.shape)
 
-    new_data = x_data[:,0,:16]
-    feature_to_featurize = x_data[:,:,16:]
+    new_data = x_data[:,0,:14]
+    feature_to_featurize = x_data[:,:,14:]
     mean = np.mean(feature_to_featurize, axis=-2)
     std = np.std(feature_to_featurize, axis=-2)
     median = np.median(feature_to_featurize, axis=-2)
@@ -112,8 +127,9 @@ def main():
 
     # Reshape the 2D array back to its original 3D shape
     # (number_of_timeintervals, 180*250, number_of_features)
-    # (667, 45000, 17)
-    TS_np = TS_np.reshape((667, 45000, 29))
+    # (667, 45000, 27)
+    TS_np = TS_np.reshape((667, 45000, 27))
+    print(TS_np[1,1,:])
 
     full_filename = os.path.join(ML_DIR, "ML_ET_CH__CH.csv")
 
@@ -148,8 +164,9 @@ def main():
     weight_dict = weight_classes(scores)
         
     # Spit the data into train and test
+    '''
     X_train, X_test, y_train, y_test = train_test_split(
-        TS_np, scores, test_size=0.1, random_state=0, shuffle=False
+        TS_np, scores, test_size=0.1, random_state=RANDOM_STATE, shuffle=False
         )
     
     X_train = np.array(X_train)
@@ -158,40 +175,96 @@ def main():
     print(
         f"Length of train  X : {len(X_train)}\nLength of test X : {len(X_test)}\nLength of train Y : {len(y_train)}\nLength of test Y : {len(y_test)}"
         )
+    '''
 
+    rs = ShuffleSplit(n_splits=1, test_size=.1, random_state=RANDOM_STATE)
+
+    for i, (train_idx, test_idx) in enumerate(rs.split(TS_np)):
+        X_train = np.array(TS_np)[train_idx.astype(int)]
+        y_train = np.array(scores)[train_idx.astype(int)]
+        X_test = np.array(TS_np)[test_idx.astype(int)]
+        y_test = np.array(scores)[test_idx.astype(int)]
+
+    #normalize train set
+    scaler = preprocessing.MinMaxScaler()
+    X_train_shape = X_train.shape    # save the shape
+    X_train = X_train.reshape(-1, X_train_shape[2])
+    scaler.fit(X_train)
+    X_train = scaler.transform(X_train)
+    X_train = X_train.reshape(X_train_shape)    # restore the shape
+    
+    #normalize test set
+    X_test_shape = X_test.shape    # save the shape
+    X_test = X_test.reshape(-1, X_test_shape[2])
+    X_test = scaler.transform(X_test)
+    X_test = X_test.reshape(X_test_shape)    # restore the shape
+    
+    
     ################################# Fit #####################################
     X_train_featurized = featurize_data(X_train)
 
-    classifier = RandomForestClassifier(class_weight=weight_dict)
+    if MODEL == "LR":
+        clf = LogisticRegression(class_weight=weight_dict)
+        #clf.fit(X_train_df, y_train)
+        clf.fit(X_train_featurized, y_train)
+    elif  MODEL == "DT":
+        clf = DecisionTreeClassifier(class_weight=weight_dict)
+        #clf.fit(X_train_df, y_train)
+        clf.fit(X_train_featurized, y_train)
+    elif  MODEL == "RF":
 
-    #TODO: add second parameter
-    param_dist = {'max_depth': randint(1,20)}
-    
-    # Use random search to find the best hyperparameters
-    rand_search = RandomizedSearchCV(classifier, 
-                                 param_distributions = param_dist, 
-                                 n_iter=5, 
-                                 cv=5)
+        clf = RandomForestClassifier(class_weight=weight_dict,
+                                     bootstrap=False,
+                                     max_features=None,
+                                     random_state=0)
+        
+        # Use random search to find the best hyperparameters
+        param_dist = {'n_estimators': randint(50,500),
+             'max_depth': randint(1,79),
+             }
+        
+        search = RandomizedSearchCV(clf,
+                                param_distributions = param_dist,
+                                n_iter=5,
+                                cv=10)
+        '''
+        param_grid = {'n_estimators': np.arange(100, 150, dtype=int),
+             'max_depth': np.arange(1, 79, dtype=int),
+             }
+        search = GridSearchCV(clf, param_grid=param_grid, cv=10)
+        '''
+        # Fit the search object to the data
+        #search.fit(X_train_df, y_train)
+        search.fit(X_train_featurized, y_train)
 
-    # Fit the random search object to the data
-    rand_search.fit(X_train_featurized, y_train)   
+        # Create a variable for the best model
+        best_rf = search.best_estimator_
 
-    #classifier.fit(X_train_featurized, y_train)
-    
-    # Create a variable for the best model
-    best_dt = rand_search.best_estimator_
+        # Print the best hyperparameters
+        print('Best hyperparameters:',  search.best_params_)
+        
+        
+    elif MODEL == "SVC":
+        clf = SVC(class_weight=weight_dict)
+        #clf.fit(X_train_df, y_train)
+        clf.fit(X_train_featurized, y_train)
+        
+    elif  MODEL == "HGBC":
+        clf = HistGradientBoostingClassifier(class_weight='balanced')
+        #clf.fit(X_train_df, y_train)
+        clf.fit(X_train_featurized, y_train)
 
-    # Print the best hyperparameters
-    print('Best hyperparameters:',  rand_search.best_params_)
-    #Binary: {'max_depth': 19}
-    #3 classes: {'max_depth': 11}
     
     ############################## Predict ####################################
 
     X_test_featurized = featurize_data(X_test)
-
-    #y_pred = classifier.predict(X_test_featurized)
-    y_pred = best_dt.predict(X_test_featurized)
+    
+    if  MODEL == "RF":
+        #y_pred = best_rf.predict(X_test_df)
+        y_pred = best_rf.predict(X_test_featurized)
+    else:
+        #y_pred = clf.predict(X_test_df)
+        y_pred = clf.predict(X_test_featurized)
     print("Shape at output after classification:", y_pred.shape)
     
     ############################ Evaluate #####################################

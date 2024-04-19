@@ -14,7 +14,9 @@ from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassif
 from sklearn.svm import SVC
 
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV, train_test_split
+from sklearn.model_selection import ShuffleSplit
 from scipy.stats import randint
+from sklearn import preprocessing
 
 #import matplotlib.pyplot as plt
 
@@ -23,7 +25,7 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = True
+BINARY = False
 EQUAL_PERCENTILES = False
 
 #MODEL = "LR"
@@ -86,7 +88,7 @@ def weight_classes(scores):
             vals_dict[i] = 1
     total = sum(vals_dict.values())
 
-    # Formula used - Naive method where
+    # Formula used:
     # weight = 1 - (no. of samples present / total no. of samples)
     # So more the samples, lower the weight
 
@@ -129,6 +131,30 @@ def featurize_data(x_data):
     new_data = np.concatenate((new_data, featurized_data), axis=1)
     print("Shape after feature union, before classification:", new_data.shape)
     return new_data
+
+
+def getEEGThreshold(scores):
+    #Split into 2 bins by percentile
+    eeg_series = pd.Series(scores)
+    if EQUAL_PERCENTILES:
+        th = eeg_series.quantile(.5)
+    else:
+        if LABEL == "Workload":
+            th = eeg_series.quantile(.93)
+        elif LABEL == "Vigilance":
+            th = eeg_series.quantile(.1)
+        else: #Stress
+            th = eeg_series.quantile(.1)
+    return th
+
+def getEEGThresholds(scores):
+    #Split into 3 bins by percentile
+    eeg_series = pd.Series(scores)
+    if EQUAL_PERCENTILES:
+        (th1, th2) = eeg_series.quantile([.33, .66])
+    else:
+        (th1, th2) = eeg_series.quantile([.52, .93])
+    return (th1, th2)
 
 
 def main():
@@ -178,7 +204,7 @@ def main():
     scores = list(scores_np)
     
     #print(scores)
-    
+    '''
     if BINARY:
         #Split into 2 bins by percentile
         eeg_series = pd.Series(scores)
@@ -209,31 +235,73 @@ def main():
     print(f"Number of classes : {number_of_classes}")
     
     weight_dict = weight_classes(scores)
+    '''
     
     print(type(TS_np))
     TS_np = np.array(TS_np)
-    print(type(TS_np))
-    X = featurize_data(TS_np)
+    #print(type(TS_np))
+    #X = featurize_data(TS_np)
     
-    X_df = pd.DataFrame(X, columns = features)
+    #X_df = pd.DataFrame(X, columns = features)
     
     # Spit the data into train and test
+    '''
     X_train_df, X_test_df, y_train, y_test = train_test_split(
         X_df, scores, test_size=0.1, shuffle=False
         )
+    '''
+    rs = ShuffleSplit(n_splits=1, test_size=.1, random_state=0)
     
-    #X_train = np.array(X_train)
-    #X_test = np.array(X_test)
+    for i, (train_idx, test_idx) in enumerate(rs.split(TS_np)):
+        X_train = np.array(TS_np)[train_idx.astype(int)]
+        y_train = np.array(scores)[train_idx.astype(int)]
+        X_test = np.array(TS_np)[test_idx.astype(int)]
+        y_test = np.array(scores)[test_idx.astype(int)]
     
+    #normalize train set
+    scaler = preprocessing.MinMaxScaler()
+    X_train_shape = X_train.shape    # save the shape
+    print(X_train_shape)
+    X_train = X_train.reshape(-1, X_train_shape[2])
+    scaler.fit(X_train)
+    X_train = scaler.transform(X_train)
+    X_train = X_train.reshape(X_train_shape)    # restore the shape
+    
+    X_train = featurize_data(X_train)
+    
+    if  BINARY:
+        th = getEEGThreshold(y_train)
+        y_train = [1 if score < th else 2 for score in y_train]
+    else:
+        (th1, th2) = getEEGThresholds(y_train)
+        y_train = [1 if score < th1 else 3 if score > th2 else 2 for score in y_train]
+    #number_of_classes = len(set(y_train))
+    
+    weight_dict = weight_classes(y_train)
+    
+    #normalize test set
+    X_test_shape = X_test.shape    # save the shape
+    X_test = X_test.reshape(-1, X_test_shape[2])
+    X_test = scaler.transform(X_test)
+    X_test = X_test.reshape(X_test_shape)    # restore the shape
+    
+    X_test = featurize_data(X_test)
+    
+    if  BINARY:
+        y_test = [1 if score < th else 2 for score in y_test]
+    else:
+        y_test = [1 if score < th1 else 3 if score > th2 else 2 for score in y_test]
 
     ################################# Fit #####################################
 
     if MODEL == "LR":
         clf = LogisticRegression(class_weight=weight_dict)
-        clf.fit(X_train_df, y_train)
+        #clf.fit(X_train_df, y_train)
+        clf.fit(X_train, y_train)
     elif  MODEL == "DT":
         clf = DecisionTreeClassifier(class_weight=weight_dict)
-        clf.fit(X_train_df, y_train)
+        #clf.fit(X_train_df, y_train)
+        clf.fit(X_train, y_train)
     elif  MODEL == "RF":
         clf = RandomForestClassifier(class_weight=weight_dict,
                                      bootstrap=False,
@@ -256,7 +324,8 @@ def main():
         search = GridSearchCV(clf, param_grid=param_grid, cv=10)
         '''
         # Fit the search object to the data
-        search.fit(X_train_df, y_train)
+        #search.fit(X_train_df, y_train)
+        search.fit(X_train, y_train)
  
         # Create a variable for the best model
         best_rf = search.best_estimator_
@@ -269,10 +338,13 @@ def main():
         
     elif MODEL == "SVC":
         clf = SVC(class_weight=weight_dict)
-        clf.fit(X_train_df, y_train)
+        #clf.fit(X_train_df, y_train)
+        clf.fit(X_train, y_train)
+    
     elif  MODEL == "HGBC":
         clf = HistGradientBoostingClassifier(class_weight='balanced')
-        clf.fit(X_train_df, y_train)
+        #clf.fit(X_train_df, y_train)
+        clf.fit(X_train, y_train)
     
     #importances = clf.feature_importances_
     #print(type(importances)) # class 'numpy.ndarray' 1x79
@@ -280,9 +352,11 @@ def main():
     ############################## Predict ####################################
     
     if  MODEL == "RF":
-        y_pred = best_rf.predict(X_test_df)
+        #y_pred = best_rf.predict(X_test_df)
+        y_pred = best_rf.predict(X_test)
     else:
-        y_pred = clf.predict(X_test_df)
+        #y_pred = clf.predict(X_test_df)
+        y_pred = clf.predict(X_test)
 
     print("Shape at output after classification:", y_pred.shape)
 

@@ -14,6 +14,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
 from sklearn.svm import SVC
+from sklearn import preprocessing
 
 from sklearn.inspection import permutation_importance
 #import matplotlib.pyplot as plt
@@ -23,7 +24,7 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = True
+BINARY = False
 EQUAL_PERCENTILES = False
 
 LABEL = "Workload"
@@ -32,12 +33,13 @@ LABEL = "Workload"
 
 #MODEL = "LR"
 #MODEL = "DT"
-MODEL = "RF"
+#MODEL = "RF"
 #MODEL = "SVC"
-#MODEL = "HGBC"
+MODEL = "HGBC"
 
-FEATURE_IMPORTANCE = True
+FEATURE_IMPORTANCE = False
 TIME_INTERVAL_DURATION = 60
+
 
 saccade_fixation = [
             'SaccadesNumber', 'SaccadesTotalDuration',
@@ -87,7 +89,7 @@ def weight_classes(scores):
             vals_dict[i] = 1
     total = sum(vals_dict.values())
 
-    # Formula used - Naive method where
+    # Formula used:
     # weight = 1 - (no. of samples present / total no. of samples)
     # So more the samples, lower the weight
 
@@ -96,9 +98,10 @@ def weight_classes(scores):
         
     return weight_dict
 
+
 def featurize_data(x_data):
     """
-    :param x_data: ngumpy array of shape
+    :param x_data: numpy array of shape
     (number_of_timeintervals, number_of_timestamps, number_of_features)
     where number_of_timestamps == TIME_INTERVAL_DURATION*250
 
@@ -130,6 +133,30 @@ def featurize_data(x_data):
     new_data = np.concatenate((new_data, featurized_data), axis=1)
     print("Shape after feature union, before classification:", new_data.shape)
     return new_data
+
+
+def getEEGThreshold(scores):
+    #Split into 2 bins by percentile
+    eeg_series = pd.Series(scores)
+    if EQUAL_PERCENTILES:
+        th = eeg_series.quantile(.5)
+    else:
+        if LABEL == "Workload":
+            th = eeg_series.quantile(.93)
+        elif LABEL == "Vigilance":
+            th = eeg_series.quantile(.1)
+        else: #Stress
+            th = eeg_series.quantile(.1)
+    return th
+
+def getEEGThresholds(scores):
+    #Split into 3 bins by percentile
+    eeg_series = pd.Series(scores)
+    if EQUAL_PERCENTILES:
+        (th1, th2) = eeg_series.quantile([.33, .66])
+    else:
+        (th1, th2) = eeg_series.quantile([.52, .93])
+    return (th1, th2)
 
 
 def main():
@@ -176,7 +203,7 @@ def main():
     scores = list(scores_np)
     
     #print(scores)
-    
+    '''
     if BINARY:
         #Split into 2 bins by percentile
         eeg_series = pd.Series(scores)
@@ -199,19 +226,20 @@ def main():
         else:
             (th1, th2) = eeg_series.quantile([.52, .93])
         scores = [1 if score < th1 else 3 if score > th2 else 2 for score in scores]
-
+    
     #print(scores)
        
     number_of_classes = len(set(scores))
     print(f"Number of classes : {number_of_classes}")
     
     weight_dict = weight_classes(scores)
+    '''
     
     # Define the K-fold Cross Validator
     num_folds = 10
 
-    #kfold = model_selection.KFold(n_splits=num_folds, shuffle=False)
-    kfold = model_selection.StratifiedKFold(n_splits=num_folds, shuffle=False)
+    kfold = model_selection.KFold(n_splits=num_folds, shuffle=False)
+    #kfold = model_selection.StratifiedKFold(n_splits=num_folds, shuffle=False)
     
     # K-fold Cross Validation model evaluation
     
@@ -234,13 +262,48 @@ def main():
     #perm_kfold_importances = np.empty(shape=[10, 14])
     
     fold_no = 1
-    #for train_idx, test_idx in kfold.split(scores):
-    for train_idx, test_idx in kfold.split(TS_np, scores):
+    for train_idx, test_idx in kfold.split(TS_np):
+    #for train_idx, test_idx in kfold.split(TS_np, scores):
     
         X_train = np.array(TS_np)[train_idx.astype(int)]
+        
+        #normalize
+        scaler = preprocessing.MinMaxScaler()
+        X_train_shape = X_train.shape    # save the shape
+        X_train = X_train.reshape(-1, X_train_shape[2])
+        scaler.fit(X_train)
+        X_train = scaler.transform(X_train)
+        X_train = X_train.reshape(X_train_shape)    # restore the shape
+        
         y_train = np.array(scores)[train_idx.astype(int)]
+        
+        if  BINARY:
+            th = getEEGThreshold(y_train)
+            y_train = [1 if score < th else 2 for score in y_train]
+        else:
+            (th1, th2) = getEEGThresholds(y_train)
+            y_train = [1 if score < th1 else 3 if score > th2 else 2 for score in y_train]
+        #number_of_classes = len(set(y_train))
+         
+        weight_dict = weight_classes(y_train)
+        
+        
         X_test = np.array(TS_np)[test_idx.astype(int)]
+        
+        #normalize
+        X_test_shape = X_test.shape    # save the shape
+        X_test = X_test.reshape(-1, X_test_shape[2])
+        X_test = scaler.transform(X_test)
+        X_test = X_test.reshape(X_test_shape)    # restore the shape
+        
         y_test = np.array(scores)[test_idx.astype(int)]
+        
+        if  BINARY:
+            y_test = [1 if score < th else 2 for score in y_test]
+        else:
+            y_test = [1 if score < th1 else 3 if score > th2 else 2 for score in y_test]
+
+        
         
         X_train_featurized = featurize_data(X_train)
         
@@ -281,8 +344,8 @@ def main():
             else:
                 clf = RandomForestClassifier(
                                          class_weight='balanced',
-                                         max_depth=md,
-                                         n_estimators=ne,
+                                         #max_depth=md,
+                                         #n_estimators=ne,
                                          random_state=0
                                          )
 
