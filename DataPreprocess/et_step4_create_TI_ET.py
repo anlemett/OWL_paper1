@@ -14,8 +14,8 @@ ET_DIR = os.path.join(DATA_DIR, "EyeTracking3")
 CH_DIR = os.path.join(DATA_DIR, "CH1")
 OUTPUT_DIR = os.path.join(DATA_DIR, "EyeTracking4")
 
-#TIME_INTERVAL_DURATION = 60  #sec
-TIME_INTERVAL_DURATION = 180  #sec
+TIME_INTERVAL_DURATION = 60  #sec
+#TIME_INTERVAL_DURATION = 180  #sec
 
 filenames = [["D1r1_MO", "D1r2_MO", "D1r3_MO"],
              ["D1r4_EI", "D1r5_EI", "D1r6_EI"],
@@ -148,7 +148,8 @@ for atco in filenames:
                 saccades_duration = []
                 for saccade in saccades_set:
                     saccade_df = ti_df[ti_df['Saccade']==saccade]
-                    saccades_duration.append(len(saccade_df.index))
+                    if not saccade_df.empty:
+                        saccades_duration.append(len(saccade_df.index))
                 
                 saccades_duration_mean = statistics.mean(saccades_duration)
                 saccades_duration_std = statistics.stdev(saccades_duration)
@@ -174,7 +175,8 @@ for atco in filenames:
                 fixation_duration = []
                 for fixation in fixation_set:
                     fixation_df = ti_df[ti_df['Fixation']==fixation]
-                    fixation_duration.append(len(fixation_df.index))
+                    if not fixation_df.empty:
+                        fixation_duration.append(len(fixation_df.index))
             
                 fixation_duration_mean = statistics.mean(fixation_duration)
                 fixation_duration_std = statistics.stdev(fixation_duration)

@@ -165,7 +165,7 @@ def main():
     
     # Define the K-fold Cross Validator
     num_folds = 10
-    kfold = model_selection.KFold(n_splits=num_folds, shuffle=False)
+    kfold = model_selection.KFold(n_splits=num_folds, shuffle=True)
     
     # K-fold Cross Validation model evaluation
     

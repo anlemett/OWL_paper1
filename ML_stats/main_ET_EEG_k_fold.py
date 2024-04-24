@@ -17,6 +17,10 @@ from sklearn.svm import SVC
 from sklearn import preprocessing
 
 from sklearn.inspection import permutation_importance
+
+from sklearn.model_selection import RandomizedSearchCV#, GridSearchCV
+
+from scipy.stats import randint
 #import matplotlib.pyplot as plt
 
 DATA_DIR = os.path.join("..", "..")
@@ -26,6 +30,7 @@ FIG_DIR = os.path.join(".", "Figures")
 
 BINARY = False
 EQUAL_PERCENTILES = False
+RANDOM_SEARCH = False
 
 LABEL = "Workload"
 #LABEL = "Vigilance"
@@ -33,9 +38,9 @@ LABEL = "Workload"
 
 #MODEL = "LR"
 #MODEL = "DT"
-#MODEL = "RF"
+MODEL = "RF"
 #MODEL = "SVC"
-MODEL = "HGBC"
+#MODEL = "HGBC"
 
 FEATURE_IMPORTANCE = False
 TIME_INTERVAL_DURATION = 60
@@ -169,11 +174,8 @@ def main():
     
     # Reshape the 2D array back to its original 3D shape
     # (number_of_timeintervals, TIME_INTERVAL_DURATION*250, number_of_features)
-    # 180 -> (631, 45000, 15), 60 -> (1768, 15000, 15)
-    if TIME_INTERVAL_DURATION == 180: 
-        TS_np = TS_np.reshape((631, 45000, 15)) #old
-    else: # 60
-        TS_np = TS_np.reshape((1731, 15000, 27))
+    # 60 -> (1731, 15000, 27)
+    TS_np = TS_np.reshape((1731, 15000, 27))
 
     
     full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
@@ -238,7 +240,7 @@ def main():
     # Define the K-fold Cross Validator
     num_folds = 10
 
-    kfold = model_selection.KFold(n_splits=num_folds, shuffle=False)
+    kfold = model_selection.KFold(n_splits=num_folds, shuffle=True)
     #kfold = model_selection.StratifiedKFold(n_splits=num_folds, shuffle=False)
     
     # K-fold Cross Validation model evaluation
@@ -248,6 +250,7 @@ def main():
     prec_per_fold = []
     rec_per_fold = []
     f1_per_fold = []
+    f1_macro_per_fold = []
     
     if FEATURE_IMPORTANCE:
         gini_kfold_importances = np.empty(shape=[10, 79])
@@ -321,43 +324,59 @@ def main():
         if MODEL == "LR":
             clf = LogisticRegression(class_weight=weight_dict)
             clf.fit(X_train_df, y_train)
+            
         elif  MODEL == "DT":
             clf = DecisionTreeClassifier(class_weight=weight_dict,
                                          random_state=0)
             clf.fit(X_train_df, y_train)
+            
         elif  MODEL == "RF":
-            if FEATURE_IMPORTANCE:
-                if LABEL == "Workload":
-                    md = 73
-                    ne = 267
-                elif LABEL == "Vigilance":
-                    md = 5
-                    ne = 465
-                clf = RandomForestClassifier(
-                                         class_weight='balanced',
-                                         bootstrap=False,
-                                         max_features=None,
-                                         #max_depth=md,
-                                         #n_estimators=ne,
-                                         random_state=0
-                                         )
-            else:
-                clf = RandomForestClassifier(
-                                         class_weight='balanced',
-                                         #max_depth=md,
-                                         #n_estimators=ne,
-                                         random_state=0
-                                         )
+            clf = RandomForestClassifier(#class_weight=weight_dict,
+                             class_weight='balanced',
+                             bootstrap=False,
+                             max_features=None,
+                             random_state=0)
 
-            clf.fit(X_train_df, y_train)
+            if RANDOM_SEARCH:
+                
+                # Use random search to find the best hyperparameters
+                param_dist = {'n_estimators': randint(50,500),
+                              'max_depth': randint(1,79),
+                              }
+                
+                search = RandomizedSearchCV(clf,
+                                        param_distributions = param_dist,
+                                        n_iter=5,
+                                        cv=10)
+                
+                '''
+                param_grid = {'n_estimators': np.arange(100, 150, dtype=int),
+                              'max_depth': np.arange(1, 79, dtype=int),
+                              }
+                search = GridSearchCV(clf, param_grid=param_grid, cv=10)
+                '''
+                
+                # Fit the search object to the data
+                search.fit(X_train_df, y_train)
+                
+                # Create a variable for the best model
+                clf = search.best_estimator_
+
+                # Print the best hyperparameters
+                #print('Best hyperparameters:',  search.best_params_)
+            else:
+                
+                clf.fit(X_train_df, y_train)
         
         elif MODEL == "SVC":
             clf = SVC(class_weight=weight_dict)
             clf.fit(X_train_df, y_train)
+            
         elif  MODEL == "HGBC":
             clf = HistGradientBoostingClassifier(class_weight='balanced',
                                                  random_state=0)
             clf.fit(X_train_df, y_train)
+            
         ############################## Predict ####################################
         
         X_test_featurized = featurize_data(X_test)
@@ -372,6 +391,7 @@ def main():
         cols.reverse()
         X_test_df[cols]
         '''
+
 
         y_pred = clf.predict(X_test_df)
         print("Shape at output after classification:", y_pred.shape)
@@ -399,10 +419,15 @@ def main():
             f1 = f1_score(y_pred=y_pred, y_true=y_test, average='micro')
             recall = recall_score(y_pred=y_pred, y_true=y_test, average='micro')
             precision = precision_score(y_pred=y_pred, y_true=y_test, average='micro')
+            f1_macro = f1_score(y_pred=y_pred, y_true=y_test, average='macro')
+            recall_macro = recall_score(y_pred=y_pred, y_true=y_test, average='macro')
+            precision_macro = precision_score(y_pred=y_pred, y_true=y_test, average='macro')
+            
         print("Accuracy:", accuracy)
         print("Precision: ", precision)
         print("Recall: ", recall)
         print("F1-score:", f1)
+        print("F1-score macro:", f1_macro)
         
         #print(f"RF train accuracy: {clf.score(X_train_df, y_train):.3f}")
         #print(f"RF test accuracy: {clf.score(X_test_df, y_test):.3f}")
@@ -411,6 +436,7 @@ def main():
         prec_per_fold.append(precision)
         rec_per_fold.append(recall)
         f1_per_fold.append(f1)
+        f1_macro_per_fold.append(f1_macro)
                 
         # Increase fold number
         fold_no = fold_no + 1
@@ -419,9 +445,11 @@ def main():
     print(prec_per_fold)
     print(rec_per_fold)
     print(f1_per_fold)
+    print(f1_macro_per_fold)
     
     print(mean(acc_per_fold))
     print(mean(f1_per_fold))
+    print(mean(f1_macro_per_fold))
     
     if FEATURE_IMPORTANCE:
         importances_mean = np.mean(gini_kfold_importances, axis=0)
