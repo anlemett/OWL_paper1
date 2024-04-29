@@ -10,8 +10,8 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-#TIME_INTERVAL_DURATION = 60
-TIME_INTERVAL_DURATION = 180
+TIME_INTERVAL_DURATION = 60
+#TIME_INTERVAL_DURATION = 180
 
 saccade_fixation = [
             'Saccades Number', 'Saccades Total Duration',
@@ -56,26 +56,8 @@ def featurize_data(x_data):
     
     new_data = x_data[:,0,:14]
 
-    feature_to_featurize = x_data[:,:,14:24]
+    feature_to_featurize = x_data[:,:,14:]
     
-    mean = np.mean(feature_to_featurize, axis=-2)
-    std = np.std(feature_to_featurize, axis=-2)
-    median = np.median(feature_to_featurize, axis=-2)
-    min = np.min(feature_to_featurize, axis=-2)
-    min[min < 0] = 0
-    max = np.max(feature_to_featurize, axis=-2)
-
-    featurized_data = np.concatenate([
-        mean,    
-        std,     
-        min,
-        max, 
-        median
-    ], axis=-1)
-
-    new_data = np.concatenate((new_data, featurized_data), axis=1)
-    
-    feature_to_featurize = x_data[:,:,24:]
     mean = np.mean(feature_to_featurize, axis=-2)
     std = np.std(feature_to_featurize, axis=-2)
     median = np.median(feature_to_featurize, axis=-2)
@@ -88,9 +70,9 @@ def featurize_data(x_data):
         min,
         max, 
         median
-    ], axis=-1)   
-    
-    new_data = np.concatenate((new_data, featurized_data), axis=1)    
+    ], axis=-1)
+
+    new_data = np.concatenate((new_data, featurized_data), axis=1)
     
     print("Shape after feature union, before classification:", new_data.shape)
     return new_data

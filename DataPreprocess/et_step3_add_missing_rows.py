@@ -19,6 +19,12 @@ metrics_list = ['Saccade', 'Fixation',
                 'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
                 'HeadHeading', 'HeadPitch',	'HeadRoll']
 
+metrics_sublist = ['LeftPupilDiameter', 'RightPupilDiameter',
+                   'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
+                   'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
+                   'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
+                   'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed']
+
 column_names = ['UnixTimestamp'] + ['SamplePerSecond'] + metrics_list
 
 filenames = ["D1r1_MO", "D1r2_MO", "D1r3_MO",
@@ -107,8 +113,11 @@ for filename in filenames:
     
     # Integer values (Saccade and Fixation): propagate last valid observation
     # forward to next valid
-    new_df = new_df.fillna(method='ffill')
-    #new_df = new_df.fillna(0) #integer values (Saccade and Fixation)
+    #new_df = new_df.fillna(method='ffill')
+    # Fill NaNs for Saccade with zero value
+    new_df[['Saccade']] = new_df[['Saccade']].fillna(value=0)
+    # Fill NaNs for Fixation with non zero value
+    new_df[['Fixation']] = new_df[['Fixation']].fillna(value=1)
     
     number_of_timestamps = last_timestamp - first_timestamp + 1
     number_of_rows1 = number_of_timestamps*250
@@ -121,6 +130,9 @@ for filename in filenames:
     #print(new_df.isnull().any().any())
     #nan_count = new_df.isna().sum()
     #print(nan_count)
+    
+    for col in metrics_sublist:
+        new_df[col][new_df[col] < 0] = 0
     
     print(len(new_df.index))
     full_filename = os.path.join(OUTPUT_DIR, "ET_" + filename +  ".csv")

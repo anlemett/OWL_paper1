@@ -27,7 +27,13 @@ def main():
     
     data_df = pd.read_csv(full_filename, sep=' ')
     
-    temp_df = data_df[["Fixation Duration Min"]]
+    #temp_df = data_df[["Fixation Duration Min"]]
+    #temp_df.to_csv("temp.csv", sep = ' ', header=True, float_format='%.3f', index=False)
+
+    temp_df = data_df[["Left Pupil Diameter min", 
+                       "Left Pupil Diameter max", 
+                       "Left Blink Opening Amplitude min",
+                       ]]
     temp_df.to_csv("temp.csv", sep = ' ', header=True, float_format='%.3f', index=False)
     
     features = data_df.columns
@@ -65,6 +71,14 @@ def main():
     plt.clf()
     
     
+    feature_data = data_df["Fixation Duration Min"]
+    plt.hist(feature_data, bins=30, edgecolor="black")  # Adjust the number of bins as needed
+    plt.xlabel("Saccades Duration Min")
+    plt.ylabel("Number of values")
+    plt.grid(True)
+    plt.show()
+    plt.clf()
+    
     means = []
     sds = []
 
@@ -88,6 +102,7 @@ def main():
     
     stats_df.to_csv("stats.csv", sep = '&', header=True, float_format='%.3f', index=False)
   
-#TODO: amplitude and speed max, head heading max
+# right/left blink opening amplitude min (1)
+
 main()
 

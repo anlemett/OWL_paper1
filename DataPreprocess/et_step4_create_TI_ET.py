@@ -37,7 +37,7 @@ filenames = [["D1r1_MO", "D1r2_MO", "D1r3_MO"],
              ["D9r4_SV", "D9r5_SV", "D9r6_SV"]
              ]
 
-#filenames = [["D1r1_MO"]]
+#filenames = [["D6r1_AE"]]
 
 # Old features:
 #           ['Saccade', 'Fixation',
@@ -132,7 +132,7 @@ for atco in filenames:
                 continue
             
             ti_saccades_df = ti_df[ti_df['Saccade']!=0]
-            if ti_saccades_df.empty:
+            if ti_saccades_df.empty: # no saccade during the whole second
                 saccades_total_duration = 0
                 saccades_number = 0
                 saccades_duration_mean = 0
@@ -159,7 +159,7 @@ for atco in filenames:
 
             ti_fixation_df = ti_df[ti_df['Fixation']!=0]
 
-            if ti_fixation_df.empty:
+            if ti_fixation_df.empty: # no fixation during the whole second, might be due to data loss
                 fixation_total_duration = 0
                 fixation_number = 0
                 fixation_duration_mean = 0
@@ -179,7 +179,7 @@ for atco in filenames:
                         fixation_duration.append(len(fixation_df.index))
             
                 fixation_duration_mean = statistics.mean(fixation_duration)
-                fixation_duration_std = statistics.stdev(fixation_duration)
+                fixation_duration_std = statistics.stdev(fixation_duration) if len(fixation_duration)>1 else 0
                 fixation_duration_median = statistics.median(fixation_duration)
                 fixation_duration_min = min(fixation_duration)
                 fixation_duration_max = max(fixation_duration)
@@ -199,8 +199,7 @@ for atco in filenames:
             FixationDurationMedian.extend([fixation_duration_median]*TIME_INTERVAL_DURATION*250)
             FixationDurationMin.extend([fixation_duration_min]*TIME_INTERVAL_DURATION*250)
             FixationDurationMax.extend([fixation_duration_max]*TIME_INTERVAL_DURATION*250)
-
-     
+        
         df['SaccadesNumber'] = SaccadesNumber
         df['SaccadesTotalDuration'] = SaccadesTotalDuration
         df['SaccadesDurationMean'] = SaccadesDurationMean
@@ -256,4 +255,3 @@ pd.set_option('display.max_columns', None)
 
 full_filename = os.path.join(OUTPUT_DIR, "ET_all_" + str(TIME_INTERVAL_DURATION) + ".csv")
 TI_df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)
-

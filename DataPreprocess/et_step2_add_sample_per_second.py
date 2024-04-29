@@ -24,7 +24,7 @@ def getValuesPerSecond(timestamps_dict, unix_timestamp):
 
 filenames = ["D1r1_MO", "D1r2_MO", "D1r3_MO",
              "D1r4_EI", "D1r5_EI", "D1r6_EI",
-             "D2r1_KV", "D2r3_KV",
+             "D2r1_KV", "D2r2_KV",
              "D2r4_UO", "D2r5_UO", "D2r6_UO",
              "D3r1_KB", "D3r2_KB", "D3r3_KB",
              "D3r4_PF", "D3r5_PF", "D3r6_PF",
