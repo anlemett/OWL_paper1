@@ -25,7 +25,9 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = False
+RANDOM_STATE = 0
+
+BINARY = True
 EQUAL_PERCENTILES = False
 
 #MODEL = "LR"
@@ -38,45 +40,9 @@ LABEL = "Workload"
 #LABEL = "Vigilance"
 #LABEL = "Stress"
 
-
 TIME_INTERVAL_DURATION = 60
 
-saccade_fixation = [
-            'SaccadesNumber', 'SaccadesTotalDuration',
-            'SaccadesDurationMean', 'SaccadesDurationStd', 'SaccadesDurationMedian',
-            'SaccadesDurationMin', 'SaccadesDurationMax',
-            'FixationNumber', 'FixationTotalDuration',
-            'FixationDurationMean', 'FixationDurationStd', 'FixationDurationMedian',
-            'FixationDurationMin', 'FixationDurationMax',
-            ]
-
-old_features = [
-            'LeftPupilDiameter', 'RightPupilDiameter',
-            'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
-            'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
-            'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
-            'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
-            'HeadHeading', 'HeadPitch', 'HeadRoll']
-
-statistics = ['mean', 'std', 'min', 'max', 'median']
-
-features = []
-for feature in saccade_fixation:
-    features.append(feature)
-for stat in statistics:
-    for feature in old_features:
-        new_feature = feature + '_' + stat
-        features.append(new_feature)
-
-occular_features = []
-for feature in saccade_fixation:
-    occular_features.append(feature)
-for stat in statistics:
-    for feature in old_features[:10]:
-        new_feature = feature + '_' + stat
-        occular_features.append(new_feature)
-
-np.random.seed(0)
+np.random.seed(RANDOM_STATE)
 
 def weight_classes(scores):
     
@@ -96,42 +62,6 @@ def weight_classes(scores):
     print(weight_dict)
         
     return weight_dict
-
-
-def featurize_data(x_data):
-    """
-    :param x_data: numpy array of shape
-    (number_of_timeintervals, number_of_timestamps, number_of_features)
-    where number_of_timestamps == TIME_INTERVAL_DURATION*250
-
-    :return: featurized numpy array of shape
-    (number_of_timeintervals, number_of_new_features)
-    """
-    print("Input shape before feature union:", x_data.shape)
-    
-    new_data = x_data[:,0,:14]
-
-    feature_to_featurize = x_data[:,:,14:]
-    #feature_to_featurize = x_data[:,:,16:] #exclude pupil diameter
-    
-    mean = np.mean(feature_to_featurize, axis=-2)
-    std = np.std(feature_to_featurize, axis=-2)
-    median = np.median(feature_to_featurize, axis=-2)
-    min = np.min(feature_to_featurize, axis=-2)
-    max = np.max(feature_to_featurize, axis=-2)
-
-    featurized_data = np.concatenate([
-        mean,    
-        std,     
-        min,     
-        max, 
-        median
-    ], axis=-1)
-
-    new_data = np.concatenate((new_data, featurized_data), axis=1)
-    print("Shape after feature union, before classification:", new_data.shape)
-    return new_data
-
 
 def getEEGThreshold(scores):
     #Split into 2 bins by percentile
@@ -159,23 +89,13 @@ def getEEGThresholds(scores):
 
 def main():
     
-    full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__ET.csv")
-    print("reading data")
-
-    # Load the 2D array from the CSV file
-    TS_np = np.loadtxt(full_filename, delimiter=" ")
+    filename = "ML_features_1min.csv"
     
-    #print(np.isnan(TS_np).any())
-    #nan_count = np.count_nonzero(np.isnan(TS_np))
-    #print(nan_count)
+    full_filename = os.path.join(ML_DIR, filename)
     
-    # Reshape the 2D array back to its original 3D shape
-    # (number_of_timeintervals, TIME_INTERVAL_DURATION*250, number_of_features)
-    # 180 -> (631, 45000, 15), 60 -> (1768, 15000, 15)
-    if TIME_INTERVAL_DURATION == 180: 
-        TS_np = TS_np.reshape((631, 45000, 15)) # old
-    else: # 60
-        TS_np = TS_np.reshape((1731, 15000, 27))
+    data_df = pd.read_csv(full_filename, sep=' ')
+    
+    features_np = data_df.to_numpy()
 
     full_filename = os.path.join(ML_DIR, "ML_ET_EEG_" + str(TIME_INTERVAL_DURATION) + "__EEG.csv")
 
@@ -185,7 +105,7 @@ def main():
     ###########################################################################
     #Shuffle data
 
-    print(TS_np.shape)
+    print(features_np.shape)
     print(scores_np.shape)
     
     if LABEL == "Workload":
@@ -195,11 +115,11 @@ def main():
     else:
         scores_np = scores_np[2,:] # Stress
 
-    zipped = list(zip(TS_np, scores_np))
+    zipped = list(zip(features_np, scores_np))
 
     np.random.shuffle(zipped)
 
-    TS_np, scores_np = zip(*zipped)
+    features_np, scores_np = zip(*zipped)
 
     scores = list(scores_np)
     
@@ -237,8 +157,8 @@ def main():
     weight_dict = weight_classes(scores)
     '''
     
-    print(type(TS_np))
-    TS_np = np.array(TS_np)
+    print(type(features_np))
+    features_np = np.array(features_np)
     #print(type(TS_np))
     #X = featurize_data(TS_np)
     
@@ -252,23 +172,17 @@ def main():
     '''
     rs = ShuffleSplit(n_splits=1, test_size=.1, random_state=0)
     
-    for i, (train_idx, test_idx) in enumerate(rs.split(TS_np)):
-        X_train = np.array(TS_np)[train_idx.astype(int)]
+    for i, (train_idx, test_idx) in enumerate(rs.split(features_np)):
+        X_train = np.array(features_np)[train_idx.astype(int)]
         y_train = np.array(scores)[train_idx.astype(int)]
-        X_test = np.array(TS_np)[test_idx.astype(int)]
+        X_test = np.array(features_np)[test_idx.astype(int)]
         y_test = np.array(scores)[test_idx.astype(int)]
     
     #normalize train set
     scaler = preprocessing.MinMaxScaler()
-    X_train_shape = X_train.shape    # save the shape
-    print(X_train_shape)
-    X_train = X_train.reshape(-1, X_train_shape[2])
     scaler.fit(X_train)
     X_train = scaler.transform(X_train)
-    X_train = X_train.reshape(X_train_shape)    # restore the shape
-    
-    X_train = featurize_data(X_train)
-    
+       
     if  BINARY:
         th = getEEGThreshold(y_train)
         y_train = [1 if score < th else 2 for score in y_train]
@@ -280,12 +194,7 @@ def main():
     weight_dict = weight_classes(y_train)
     
     #normalize test set
-    X_test_shape = X_test.shape    # save the shape
-    X_test = X_test.reshape(-1, X_test_shape[2])
     X_test = scaler.transform(X_test)
-    X_test = X_test.reshape(X_test_shape)    # restore the shape
-    
-    X_test = featurize_data(X_test)
     
     if  BINARY:
         y_test = [1 if score < th else 2 for score in y_test]
@@ -298,15 +207,22 @@ def main():
         clf = LogisticRegression(class_weight=weight_dict)
         #clf.fit(X_train_df, y_train)
         clf.fit(X_train, y_train)
+                
+    elif MODEL == "SVC":
+        clf = SVC(class_weight=weight_dict)
+        #clf.fit(X_train_df, y_train)
+        clf.fit(X_train, y_train)
+        
     elif  MODEL == "DT":
         clf = DecisionTreeClassifier(class_weight=weight_dict)
         #clf.fit(X_train_df, y_train)
         clf.fit(X_train, y_train)
+        
     elif  MODEL == "RF":
         clf = RandomForestClassifier(class_weight=weight_dict,
-                                     bootstrap=False,
+                                     #bootstrap=False,
                                      max_features=None,
-                                     random_state=0)
+                                     random_state=RANDOM_STATE)
         
         # Use random search to find the best hyperparameters
         param_dist = {'n_estimators': randint(50,500),
@@ -314,9 +230,11 @@ def main():
              }
         
         search = RandomizedSearchCV(clf, 
-                                param_distributions = param_dist, 
-                                n_iter=5, 
-                                cv=10)
+                                param_distributions = param_dist,
+                                #scoring = 'f1_macro',
+                                n_iter=10, 
+                                cv=10,
+                                random_state=RANDOM_STATE)
         '''
         param_grid = {'n_estimators': np.arange(100, 150, dtype=int),
              'max_depth': np.arange(1, 79, dtype=int),
@@ -325,22 +243,17 @@ def main():
         '''
         # Fit the search object to the data
         #search.fit(X_train_df, y_train)
+        print("Before fit")
         search.fit(X_train, y_train)
+        print("After fit")
  
         # Create a variable for the best model
         best_rf = search.best_estimator_
 
         # Print the best hyperparameters
         print('Best hyperparameters:',  search.best_params_)
-        #WL: {'max_depth': 73, 'n_estimators': 267}
-        #Vigilance: {'max_depth': 5, 'n_estimators': 465}
+        #WL, n_iter=10: {'max_depth': , 'n_estimators': }
         
-        
-    elif MODEL == "SVC":
-        clf = SVC(class_weight=weight_dict)
-        #clf.fit(X_train_df, y_train)
-        clf.fit(X_train, y_train)
-    
     elif  MODEL == "HGBC":
         clf = HistGradientBoostingClassifier(class_weight='balanced')
         #clf.fit(X_train_df, y_train)
@@ -372,10 +285,14 @@ def main():
         f1 = f1_score(y_pred=y_pred, y_true=y_test, average='micro')
         recall = recall_score(y_pred=y_pred, y_true=y_test, average='micro')
         precision = precision_score(y_pred=y_pred, y_true=y_test, average='micro')
+        
+    f1_macro = f1_score(y_pred=y_pred, y_true=y_test, average='macro')
+    
     print("Accuracy:", accuracy)
-    print("Precision: ", precision)
-    print("Recall: ", recall)
-    print("F1-score:", f1)
+    #print("Precision: ", precision)
+    #print("Recall: ", recall)
+    #print("F1-score:", f1)
+    print("Macro F1-score:", f1_macro)
     
     
 start_time = time.time()

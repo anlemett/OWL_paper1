@@ -14,8 +14,15 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
 from sklearn.svm import SVC
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+from xgboost import XGBClassifier
 
 from sklearn import preprocessing
+
+from sklearn.model_selection import RandomizedSearchCV#, GridSearchCV
+
+from scipy.stats import randint
 
 
 DATA_DIR = os.path.join("..", "..")
@@ -23,40 +30,17 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-BINARY = False
+RANDOM_STATE = 0
+
+BINARY = True
+RANDOM_SEARCH = False
 
 #MODEL = "LR"
+MODEL = "SVC"
 #MODEL = "DT"
 #MODEL = "RF"
-#MODEL = "SVC"
-MODEL = "HGBC"
+#MODEL = "HGBC"
 
-saccade_fixation = [
-            'SaccadesNumber', 'SaccadesTotalDuration',
-            'SaccadesDurationMean', 'SaccadesDurationStd', 'SaccadesDurationMedian',
-            'SaccadesDurationMin', 'SaccadesDurationMax',
-            'FixationNumber', 'FixationTotalDuration',
-            'FixationDurationMean', 'FixationDurationStd', 'FixationDurationMedian',
-            'FixationDurationMin', 'FixationDurationMax',
-            ]
-
-old_features = [
-            'LeftPupilDiameter', 'RightPupilDiameter',
-            'LeftBlinkClosingAmplitude', 'LeftBlinkOpeningAmplitude',
-            'LeftBlinkClosingSpeed', 'LeftBlinkOpeningSpeed',
-            'RightBlinkClosingAmplitude', 'RightBlinkOpeningAmplitude',
-            'RightBlinkClosingSpeed', 'RightBlinkOpeningSpeed',
-            'HeadHeading', 'HeadPitch', 'HeadRoll']
-
-statistics = ['mean', 'std', 'min', 'max', 'median']
-
-features = []
-for feature in saccade_fixation:
-    features.append(feature)
-for stat in statistics:
-    for feature in old_features:
-        new_feature = feature + '_' + stat
-        features.append(new_feature)
 
 np.random.seed(0)
 
@@ -80,55 +64,16 @@ def weight_classes(scores):
     return weight_dict
 
 
-def featurize_data(x_data):
-    """
-    :param x_data: numpy array of shape
-    (number_of_timeintervals, number_of_timestamps, number_of_features)
-    where number_of_timestamps == TIME_INTERVAL_DURATION*250
-
-    :return: featurized numpy array of shape
-    (number_of_timeintervals, number_of_new_features)
-    """
-    print("Input shape before feature union:", x_data.shape)
-    
-    new_data = x_data[:,0,:14]
-    print(new_data.shape)
-    
-    feature_to_featurize = x_data[:,:,14:]
-    #feature_to_featurize = x_data[:,:,16:] #exclude pupil diameter
-    
-    mean = np.mean(feature_to_featurize, axis=-2)
-    std = np.std(feature_to_featurize, axis=-2)
-    median = np.median(feature_to_featurize, axis=-2)
-    min = np.min(feature_to_featurize, axis=-2)
-    max = np.max(feature_to_featurize, axis=-2)
-
-    featurized_data = np.concatenate([
-        mean,    
-        std,     
-        min,     
-        max, 
-        median
-    ], axis=-1)
-
-    new_data = np.concatenate((new_data, featurized_data), axis=1)
-    print("Shape after feature union, before classification:", new_data.shape)
-    return new_data
-
-
 def main():
     
-    full_filename = os.path.join(ML_DIR, "ML_ET_CH__ET.csv")
-    print("reading data")
+    filename = "ML_features_3min.csv"
+    
+    full_filename = os.path.join(ML_DIR, filename)
+    
+    data_df = pd.read_csv(full_filename, sep=' ')
+    
+    features_np = data_df.to_numpy()
 
-    # Load the 2D array from the CSV file
-    TS_np = np.loadtxt(full_filename, delimiter=" ")
-
-    # Reshape the 2D array back to its original 3D shape
-    # (number_of_timeintervals, 180*250, number_of_features)
-    # (667, 45000, 27)
-    TS_np = TS_np.reshape((667, 45000, 27))
-    print(TS_np[1,1,:])
 
     full_filename = os.path.join(ML_DIR, "ML_ET_CH__CH.csv")
 
@@ -138,10 +83,10 @@ def main():
     ###########################################################################
     #Shuffle data
 
-    print(TS_np.shape)
+    print(features_np.shape)
     print(scores_np.shape)
 
-    zipped = list(zip(TS_np, scores_np))
+    zipped = list(zip(features_np, scores_np))
 
     np.random.shuffle(zipped)
 
@@ -152,7 +97,7 @@ def main():
     #print(scores)
     
     if BINARY:
-        scores = [1 if score < 4 else 2 for score in scores]
+        scores = [0 if score < 4 else 1 for score in scores]
     else:
         scores = [1 if score < 2 else 3 if score > 3 else 2 for score in scores]
 
@@ -174,44 +119,39 @@ def main():
     prec_per_fold = []
     rec_per_fold = []
     f1_per_fold = []
+    f1_macro_per_fold = []
     
     fold_no = 1
     for train_idx, test_idx in kfold.split(scores):
     
-        X_train = np.array(TS_np)[train_idx.astype(int)]
+        X_train = np.array(features_np)[train_idx.astype(int)]
         y_train = np.array(scores)[train_idx.astype(int)]
-        X_test = np.array(TS_np)[test_idx.astype(int)]
+        X_test = np.array(features_np)[test_idx.astype(int)]
         y_test = np.array(scores)[test_idx.astype(int)]
         
         #normalize train set
         scaler = preprocessing.MinMaxScaler()
-        X_train_shape = X_train.shape    # save the shape
-        X_train = X_train.reshape(-1, X_train_shape[2])
         scaler.fit(X_train)
         X_train = scaler.transform(X_train)
-        X_train = X_train.reshape(X_train_shape)    # restore the shape
         
         #normalize test set
-        X_test_shape = X_test.shape    # save the shape
-        X_test = X_test.reshape(-1, X_test_shape[2])
         X_test = scaler.transform(X_test)
-        X_test = X_test.reshape(X_test_shape)    # restore the shape
-        
-        
-        X_train_featurized = featurize_data(X_train)
-        
-        X_train_df = pd.DataFrame(X_train_featurized, columns = features)
         
         
         ################################# Fit #####################################
 
         if MODEL == "LR":
             clf = LogisticRegression(class_weight=weight_dict)
-            clf.fit(X_train_df, y_train)
+            clf.fit(X_train, y_train)
+            
+        elif MODEL == "SVC":
+            clf = SVC(class_weight=weight_dict)
+            clf.fit(X_train, y_train)
+
         elif  MODEL == "DT":
             clf = DecisionTreeClassifier(class_weight=weight_dict,
                                          random_state=0)
-            clf.fit(X_train_df, y_train)
+            clf.fit(X_train, y_train)
         elif  MODEL == "RF":
             clf = RandomForestClassifier(
                                          class_weight='balanced',
@@ -220,23 +160,47 @@ def main():
                                          random_state=0
                                          )
 
-            clf.fit(X_train_df, y_train)
-        
-        elif MODEL == "SVC":
-            clf = SVC(class_weight=weight_dict)
-            clf.fit(X_train_df, y_train)
+            if RANDOM_SEARCH:
+                
+                # Use random search to find the best hyperparameters
+                param_dist = {'n_estimators': randint(50,500),
+                              'max_depth': randint(1,79),
+                              }
+                
+                search = RandomizedSearchCV(clf,
+                                        param_distributions = param_dist,
+                                        scoring = 'f1_macro',
+                                        n_iter=5,
+                                        cv=10)
+                
+                '''
+                param_grid = {'n_estimators': np.arange(100, 150, dtype=int),
+                              'max_depth': np.arange(1, 79, dtype=int),
+                              }
+                search = GridSearchCV(clf, param_grid=param_grid, cv=10)
+                '''
+                
+                # Fit the search object to the data
+                search.fit(X_train, y_train)
+                
+                # Create a variable for the best model
+                clf = search.best_estimator_
+
+                # Print the best hyperparameters
+                #print('Best hyperparameters:',  search.best_params_)
+            else:
+                
+                clf.fit(X_train, y_train)
+
         elif  MODEL == "HGBC":
             clf = HistGradientBoostingClassifier(class_weight='balanced',
                                                  random_state=0)
-            clf.fit(X_train_df, y_train)
+            clf.fit(X_train, y_train)
+            
     
         ############################## Predict ####################################
-        
-        X_test_featurized = featurize_data(X_test)
-        
-        X_test_df = pd.DataFrame(X_test_featurized, columns = features)
-        
-        y_pred = clf.predict(X_test_df)
+                
+        y_pred = clf.predict(X_test)
         print("Shape at output after classification:", y_pred.shape)
     
         ############################ Evaluate #####################################
@@ -251,15 +215,24 @@ def main():
             f1 = f1_score(y_pred=y_pred, y_true=y_test, average='micro')
             recall = recall_score(y_pred=y_pred, y_true=y_test, average='micro')
             precision = precision_score(y_pred=y_pred, y_true=y_test, average='micro')
+        f1_macro = f1_score(y_pred=y_pred, y_true=y_test, average='macro')
+        
         print("Accuracy:", accuracy)
         print("Precision: ", precision)
         print("Recall: ", recall)
         print("F1-score:", f1)
+        print("F1-score macro:", f1_macro)
+        
+        print(classification_report(y_test, y_pred, digits=4))
+        
+        matrix = confusion_matrix(y_test, y_pred)
+        print(matrix)
         
         acc_per_fold.append(accuracy)
         prec_per_fold.append(precision)
         rec_per_fold.append(recall)
         f1_per_fold.append(f1)
+        f1_macro_per_fold.append(f1_macro)
                 
         # Increase fold number
         fold_no = fold_no + 1
@@ -268,9 +241,11 @@ def main():
     print(prec_per_fold)
     print(rec_per_fold)
     print(f1_per_fold)
+    print(f1_macro_per_fold)
     
     print(mean(acc_per_fold))
     print(mean(f1_per_fold))
+    print(mean(f1_macro_per_fold))
 
 start_time = time.time()
 

@@ -15,18 +15,21 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
 from sklearn.svm import SVC
 from sklearn import preprocessing
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
 
 from sklearn.inspection import permutation_importance
 
 from sklearn.model_selection import RandomizedSearchCV#, GridSearchCV
 
 from scipy.stats import randint
-#import matplotlib.pyplot as plt
 
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
+
+RANDOM_STATE = 0
 
 BINARY = True
 EQUAL_PERCENTILES = False
@@ -37,16 +40,16 @@ LABEL = "Workload"
 #LABEL = "Stress"
 
 #MODEL = "LR"
+#MODEL = "SVC"
 #MODEL = "DT"
 MODEL = "RF"
-#MODEL = "SVC"
 #MODEL = "HGBC"
 
 FEATURE_IMPORTANCE = False
 TIME_INTERVAL_DURATION = 60
 
 
-np.random.seed(0)
+np.random.seed(RANDOM_STATE)
 
 def weight_classes(scores):
     
@@ -64,7 +67,7 @@ def weight_classes(scores):
 
     weight_dict = {k: (1 - (v / total)) for k, v in vals_dict.items()}
     print(weight_dict)
-        
+            
     return weight_dict
 
 
@@ -94,10 +97,7 @@ def getEEGThresholds(scores):
 
 def main():
     
-    if TIME_INTERVAL_DURATION == 60:
-        filename = "ML_features_1min.csv"
-    else:
-        filename = "ML_features_3min.csv"
+    filename = "ML_features_1min.csv"
     
     full_filename = os.path.join(ML_DIR, filename)
     
@@ -180,6 +180,10 @@ def main():
     f1_per_fold = []
     f1_macro_per_fold = []
     
+    # f1-macro is better to tackle class imbalance, as it penalises
+    # the model / algorithm for performing poorly on the under-represented dataset
+    # https://stackoverflow.com/questions/55740220/macro-vs-micro-vs-weighted-vs-samples-f1-score
+    
     if FEATURE_IMPORTANCE:
         gini_kfold_importances = np.empty(shape=[10, 79])
         perm_kfold_importances = np.empty(shape=[10, 79])
@@ -233,31 +237,47 @@ def main():
             clf = LogisticRegression(class_weight=weight_dict)
             clf.fit(X_train, y_train)
             
+        elif MODEL == "SVC":
+            clf = SVC(class_weight=weight_dict)
+            clf.fit(X_train, y_train)
+            
         elif  MODEL == "DT":
             clf = DecisionTreeClassifier(class_weight=weight_dict,
-                                         random_state=0)
+                                         random_state=RANDOM_STATE)
             clf.fit(X_train, y_train)
             
         elif  MODEL == "RF":
-            clf = RandomForestClassifier(#class_weight=weight_dict,
-                             class_weight='balanced',
+            clf = RandomForestClassifier(class_weight=weight_dict,
+                             #class_weight='balanced',
                              #bootstrap=False,
                              max_features=None,
-                             random_state=0)
+                             random_state=RANDOM_STATE)
 
             if RANDOM_SEARCH:
                 
                 # Use random search to find the best hyperparameters
-                param_dist = {'n_estimators': randint(50,500),
-                              'max_depth': randint(1,79),
+                param_dist = {'n_estimators': randint(50,500),#the number of trees in the forest
+                              'max_depth': randint(1,79),#the number of features considered for splitting at each leaf node
+                              #'max_features': ['auto', 'sqrt'],
+                              #'min_samples_leaf': randint(1,5),
+                              #'min_samples_split': randint(2,5)
                               }
                 
                 search = RandomizedSearchCV(clf,
                                         param_distributions = param_dist,
+                                        scoring = 'f1_macro',
                                         n_iter=5,
-                                        cv=10)
+                                        cv=3)
                 
                 '''
+                param_grid = {
+                    'bootstrap': [True],
+                    'max_depth': [80, 90, 100, 110],
+                    'max_features': [2, 3],
+                    'min_samples_leaf': [3, 4, 5],
+                    'min_samples_split': [8, 10, 12],
+                    'n_estimators': [100, 200, 300, 1000]
+                    }
                 param_grid = {'n_estimators': np.arange(100, 150, dtype=int),
                               'max_depth': np.arange(1, 79, dtype=int),
                               }
@@ -275,14 +295,10 @@ def main():
             else:
                 
                 clf.fit(X_train, y_train)
-        
-        elif MODEL == "SVC":
-            clf = SVC(class_weight=weight_dict)
-            clf.fit(X_train, y_train)
-            
+                    
         elif  MODEL == "HGBC":
             clf = HistGradientBoostingClassifier(class_weight='balanced',
-                                                 random_state=0)
+                                                 random_state=RANDOM_STATE)
             clf.fit(X_train, y_train)
             
         ############################## Predict ####################################
@@ -325,7 +341,11 @@ def main():
         print("F1-score:", f1)
         print("F1-score macro:", f1_macro)
         
+        print(classification_report(y_test, y_pred, digits=4))
         
+        matrix = confusion_matrix(y_test, y_pred)
+        print(matrix)
+
         #print(f"Train accuracy: {clf.score(X_train_df, y_train):.3f}")
         #print(f"Test accuracy: {clf.score(X_test_df, y_test):.3f}")
         
