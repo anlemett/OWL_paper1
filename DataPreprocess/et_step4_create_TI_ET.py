@@ -80,6 +80,9 @@ for atco in filenames:
         print(filename)
         full_filename = os.path.join(ET_DIR, 'ET_' + filename +  ".csv")
         df = pd.read_csv(full_filename, sep=' ')
+        
+        negative_count = df['LeftBlinkOpeningAmplitude'].lt(0).sum()
+        print(negative_count)
                        
         first_timestamp = df['UnixTimestamp'].tolist()[0]
                       
@@ -252,6 +255,9 @@ for atco in filenames:
 
 pd.set_option('display.max_columns', None)
 #print(TI_df.head(1))
+
+negative_count = TI_df['LeftBlinkOpeningAmplitude'].lt(0).sum()
+print(negative_count)
 
 full_filename = os.path.join(OUTPUT_DIR, "ET_all_" + str(TIME_INTERVAL_DURATION) + ".csv")
 TI_df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)

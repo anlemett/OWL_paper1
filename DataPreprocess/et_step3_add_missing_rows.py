@@ -48,7 +48,7 @@ filenames = ["D1r1_MO", "D1r2_MO", "D1r3_MO",
              ]
 
 # for testing
-filenames = ["D9r4_SV"]
+#filenames = ["D9r4_SV"]
 
 for filename in filenames:
     full_filename = os.path.join(INPUT_DIR, "ET_" + filename +  ".csv")
@@ -123,9 +123,9 @@ for filename in filenames:
     number_of_rows1 = number_of_timestamps*250
     number_of_rows2 = len(new_df.index)
     
-    print(number_of_timestamps)
-    print(number_of_rows1)
-    print(number_of_rows2)
+    #print(number_of_timestamps)
+    #print(number_of_rows1)
+    #print(number_of_rows2)
     
     #print(new_df.isnull().any().any())
     #nan_count = new_df.isna().sum()
@@ -134,7 +134,11 @@ for filename in filenames:
     for col in metrics_sublist:
         new_df[col][new_df[col] < 0] = 0
     
-    print(len(new_df.index))
+    #print(len(new_df.index))
+    
+    negative_count = new_df['LeftBlinkOpeningAmplitude'].lt(0).sum()
+    print(negative_count)
+    
     full_filename = os.path.join(OUTPUT_DIR, "ET_" + filename +  ".csv")
     new_df.to_csv(full_filename, sep=' ', encoding='utf-8', index = False, header = True)
     

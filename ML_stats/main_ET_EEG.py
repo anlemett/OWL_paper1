@@ -13,12 +13,11 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
 from sklearn.svm import SVC
 
-from sklearn.model_selection import RandomizedSearchCV, GridSearchCV, train_test_split
+from sklearn.model_selection import RandomizedSearchCV#, train_test_split, GridSearchCV
 from sklearn.model_selection import ShuffleSplit
 from scipy.stats import randint
 from sklearn import preprocessing
-
-#import matplotlib.pyplot as plt
+from scipy.stats import uniform
 
 DATA_DIR = os.path.join("..", "..")
 DATA_DIR = os.path.join(DATA_DIR, "Data")
@@ -31,14 +30,19 @@ BINARY = True
 EQUAL_PERCENTILES = False
 
 #MODEL = "LR"
-#MODEL = "DT"
-MODEL = "RF"
 #MODEL = "SVC"
+MODEL = "DT"
+#MODEL = "RF"
 #MODEL = "HGBC"
 
 LABEL = "Workload"
 #LABEL = "Vigilance"
 #LABEL = "Stress"
+
+N_ITER = 100
+CV = 5
+#SCORING = 'f1_macro'
+SCORING = 'accuracy'
 
 TIME_INTERVAL_DURATION = 60
 
@@ -59,7 +63,7 @@ def weight_classes(scores):
     # So more the samples, lower the weight
 
     weight_dict = {k: (1 - (v / total)) for k, v in vals_dict.items()}
-    print(weight_dict)
+    #print(weight_dict)
         
     return weight_dict
 
@@ -105,8 +109,8 @@ def main():
     ###########################################################################
     #Shuffle data
 
-    print(features_np.shape)
-    print(scores_np.shape)
+    #print(features_np.shape)
+    #print(scores_np.shape)
     
     if LABEL == "Workload":
         scores_np = scores_np[0,:] # WL
@@ -157,12 +161,8 @@ def main():
     weight_dict = weight_classes(scores)
     '''
     
-    print(type(features_np))
+    #print(type(features_np))
     features_np = np.array(features_np)
-    #print(type(TS_np))
-    #X = featurize_data(TS_np)
-    
-    #X_df = pd.DataFrame(X, columns = features)
     
     # Spit the data into train and test
     '''
@@ -170,7 +170,7 @@ def main():
         X_df, scores, test_size=0.1, shuffle=True
         )
     '''
-    rs = ShuffleSplit(n_splits=1, test_size=.1, random_state=0)
+    rs = ShuffleSplit(n_splits=1, test_size=.1, random_state=RANDOM_STATE)
     
     for i, (train_idx, test_idx) in enumerate(rs.split(features_np)):
         X_train = np.array(features_np)[train_idx.astype(int)]
@@ -189,7 +189,10 @@ def main():
     else:
         (th1, th2) = getEEGThresholds(y_train)
         y_train = [1 if score < th1 else 3 if score > th2 else 2 for score in y_train]
-    #number_of_classes = len(set(y_train))
+    
+    print("EEG")
+    number_of_classes = len(set(y_train))
+    print(f"Number of classes : {number_of_classes}")
     
     weight_dict = weight_classes(y_train)
     
@@ -200,23 +203,103 @@ def main():
         y_test = [1 if score < th else 2 for score in y_test]
     else:
         y_test = [1 if score < th1 else 3 if score > th2 else 2 for score in y_test]
-
+        
     ################################# Fit #####################################
+    
+    print(f"Model: {MODEL}")
+    print(f"Scoring: {SCORING}, n_iter: {N_ITER}, cv: {CV}")
 
     if MODEL == "LR":
-        clf = LogisticRegression(class_weight=weight_dict)
-        #clf.fit(X_train_df, y_train)
-        clf.fit(X_train, y_train)
-                
+        
+        clf = LogisticRegression(class_weight=weight_dict, solver='lbfgs')
+        
+        param_dist = {
+            'C': uniform(loc=0, scale=4),  # Regularization parameter
+            'penalty': ['l1', 'l2'],       # Penalty norm
+             }
+        
+        search = RandomizedSearchCV(clf, 
+                                param_distributions = param_dist,
+                                scoring = SCORING,
+                                n_iter=N_ITER,
+                                cv=CV,
+                                n_jobs=-1,
+                                random_state=RANDOM_STATE)
+        search.fit(X_train, y_train)
+        # Create a variable for the best model
+        best_rf = search.best_estimator_
+
+        # Print the best hyperparameters
+        print('Best hyperparameters:',  search.best_params_)
+        # scoring = 'accuracy', n_iter=100, cv=5:
+        #WL, 3 classes: {'C': 3.918, 'penalty': l2} Acc=0.72, MacroF1=0.6 time:2sec
+        #WL, binary: {'C': 3.779, 'penalty': l2} Acc=0.8, MacroF1=0.65    time:1sec
+
+        # scoring = 'f1_macro', n_iter=100, cv=5:
+        #WL, 3 classes: {'C': 2.79, 'penalty': l2} Acc=0.7, MacroF1=0.56  time:2sec
+        #WL, binary: {'C': 3.48, 'penalty': l2} Acc=0.8, MacroF1=0.65     time:1sec
+        
     elif MODEL == "SVC":
+        
         clf = SVC(class_weight=weight_dict)
-        #clf.fit(X_train_df, y_train)
-        clf.fit(X_train, y_train)
+        
+        param_dist = {
+            'C': uniform(loc=0, scale=10),  # Regularization parameter
+            'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],  # Kernel type
+            'gamma': ['scale', 'auto'],  # Kernel coefficient
+            'degree': randint(1, 10)  # Degree of polynomial kernel
+            }
+        
+        search = RandomizedSearchCV(clf, 
+                                param_distributions = param_dist,
+                                scoring = SCORING,
+                                n_iter=N_ITER,
+                                cv=CV,
+                                n_jobs=-1,
+                                random_state=RANDOM_STATE)
+        search.fit(X_train, y_train)
+        # Create a variable for the best model
+        best_rf = search.best_estimator_
+
+        # Print the best hyperparameters
+        print('Best hyperparameters:',  search.best_params_)
+        # scoring = 'accuracy', n_iter=100, cv=5:
+        #WL, 3 classes: {'C': 6.748, 'kernel': poly, 'gamma': scale, 'degree': 5} Acc=0.74, MacroF1=0.61 time:6sec
+        #WL, binary: {'C': 6.789, 'kernel': poly, 'gamma': scale, 'degree': 8} Acc=0.89, MacroF1=0.69    time:6sec
+
+        # scoring = 'f1_macro', n_iter=100, cv=5:
+        #WL, 3 classes: {'C': 9.167, 'kernel': rbf, 'gamma': scale, 'degree': 2} Acc=0.78, MacroF1=0.7   time:7sec
+        #WL, binary: {'C': 3.154, 'kernel': poly, 'gamma': scale, 'degree': 6} Acc=0.87, MacroF1=0.69    time:5sec
         
     elif  MODEL == "DT":
+        
         clf = DecisionTreeClassifier(class_weight=weight_dict)
-        #clf.fit(X_train_df, y_train)
-        clf.fit(X_train, y_train)
+
+        # Use random search to find the best hyperparameters
+        param_dist = {
+             'max_depth': randint(1,79),
+             }
+        
+        search = RandomizedSearchCV(clf, 
+                                param_distributions = param_dist,
+                                scoring = SCORING,
+                                n_iter=N_ITER,
+                                cv=CV,
+                                n_jobs=-1,
+                                random_state=RANDOM_STATE)
+        search.fit(X_train, y_train)
+        # Create a variable for the best model
+        best_rf = search.best_estimator_
+
+        # Print the best hyperparameters
+        print('Best hyperparameters:',  search.best_params_)
+        # scoring = 'accuracy', n_iter=100, cv=5:
+        #WL, 3 classes: {'max_depth': 14} Acc=0.69, MacroF1=0.59 time:9sec
+        #WL, binary: {'max_depth': 70} Acc=0.91, MacroF1=0.69    time:5sec
+
+        # scoring = 'f1_macro', n_iter=100, cv=5:
+        #WL, 3 classes: {'max_depth': 14} Acc=0.69, MacroF1=0.59 time:9sec
+        #WL, binary: {'max_depth': 11} Acc=0.89, MacroF1=0.69    time:5sec
         
     elif  MODEL == "RF":
         clf = RandomForestClassifier(class_weight=weight_dict,
@@ -231,9 +314,10 @@ def main():
         
         search = RandomizedSearchCV(clf, 
                                 param_distributions = param_dist,
-                                #scoring = 'f1_macro',
-                                n_iter=10, 
-                                cv=10,
+                                scoring = SCORING,
+                                n_iter=N_ITER, 
+                                cv=CV,
+                                n_jobs=-1,
                                 random_state=RANDOM_STATE)
         '''
         param_grid = {'n_estimators': np.arange(100, 150, dtype=int),
@@ -242,34 +326,58 @@ def main():
         search = GridSearchCV(clf, param_grid=param_grid, cv=10)
         '''
         # Fit the search object to the data
-        #search.fit(X_train_df, y_train)
-        print("Before fit")
         search.fit(X_train, y_train)
-        print("After fit")
  
         # Create a variable for the best model
         best_rf = search.best_estimator_
 
         # Print the best hyperparameters
         print('Best hyperparameters:',  search.best_params_)
-        #WL, n_iter=10: {'max_depth': , 'n_estimators': }
+        
+        #scoring = 'accuracy', n_iter=100, cv=5:
+        #WL, 3 classes: {'max_depth': 12, 'n_estimators': 136} Acc=0.82 MacroF1=0.7   time:830sec
+        #WL, binary: {'max_depth': 10, 'n_estimators': 261} Acc=0.95  MacroF1=0.77    time:530sec
+
+        #scoring = 'f1_macro', n_iter=100, cv=5:
+        #WL, 3 classes: {'max_depth': 24, 'n_estimators': 237} Acc=0.83 MacroF1=0.72  time:835sec
+        #WL, binary: {'max_depth': 7, 'n_estimators': 97} Acc=0.96  MacroF1=0.84      time:526sec
         
     elif  MODEL == "HGBC":
-        clf = HistGradientBoostingClassifier(class_weight='balanced')
-        #clf.fit(X_train_df, y_train)
-        clf.fit(X_train, y_train)
+        clf = HistGradientBoostingClassifier(class_weight='balanced',
+                                             random_state=RANDOM_STATE)
+
+        # Use random search to find the best hyperparameters
+        param_dist = {
+             'max_depth': randint(1,79),
+             }
+        
+        search = RandomizedSearchCV(clf, 
+                                param_distributions = param_dist,
+                                scoring = SCORING,
+                                n_iter=N_ITER,
+                                cv=CV,
+                                n_jobs=-1,
+                                random_state=RANDOM_STATE)
+        search.fit(X_train, y_train)
+        # Create a variable for the best model
+        best_rf = search.best_estimator_
+
+        # Print the best hyperparameters
+        print('Best hyperparameters:',  search.best_params_)
+        # scoring = 'accuracy', n_iter=100, cv=5:
+        #WL, 3 classes: {'max_depth': 12} Acc=0.86, MacroF1=0.77  time:101sec
+        #WL, binary: {'max_depth': 18} Acc=0.95, MacroF1=0.77     time:106sec
+
+        # scoring = 'f1_macro', n_iter=100, cv=5:
+        #WL, 3 classes: {'max_depth': 12} Acc=0.86 MacroF1=0.77   time:253sec
+        #WL, binary: {'max_depth': 4} Acc=0.94 MacroF1=0.82       time:131sec
     
     #importances = clf.feature_importances_
     #print(type(importances)) # class 'numpy.ndarray' 1x79
     
     ############################## Predict ####################################
     
-    if  MODEL == "RF":
-        #y_pred = best_rf.predict(X_test_df)
-        y_pred = best_rf.predict(X_test)
-    else:
-        #y_pred = clf.predict(X_test_df)
-        y_pred = clf.predict(X_test)
+    y_pred = best_rf.predict(X_test)
 
     print("Shape at output after classification:", y_pred.shape)
 
@@ -282,9 +390,9 @@ def main():
         recall = recall_score(y_pred=y_pred, y_true=y_test, average='binary')
         f1 = f1_score(y_pred=y_pred, y_true=y_test, average='binary')
     else:
-        f1 = f1_score(y_pred=y_pred, y_true=y_test, average='micro')
         recall = recall_score(y_pred=y_pred, y_true=y_test, average='micro')
         precision = precision_score(y_pred=y_pred, y_true=y_test, average='micro')
+        f1 = f1_score(y_pred=y_pred, y_true=y_test, average='micro')
         
     f1_macro = f1_score(y_pred=y_pred, y_true=y_test, average='macro')
     

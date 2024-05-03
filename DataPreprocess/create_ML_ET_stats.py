@@ -10,8 +10,8 @@ DATA_DIR = os.path.join(DATA_DIR, "Data")
 ML_DIR = os.path.join(DATA_DIR, "MLInput")
 FIG_DIR = os.path.join(".", "Figures")
 
-TIME_INTERVAL_DURATION = 60
-#TIME_INTERVAL_DURATION = 180
+#TIME_INTERVAL_DURATION = 60
+TIME_INTERVAL_DURATION = 180
 
 saccade_fixation = [
             'Saccades Number', 'Saccades Total Duration',
@@ -30,7 +30,7 @@ old_features = [
             'Right Blink Closing Speed', 'Right Blink Opening Speed',
             'Head Heading', 'Head Pitch', 'Head Roll']
 
-statistics = ['mean', 'std', 'min', 'max', 'median']
+statistics = ['Mean', 'Std', 'Min', 'Max', 'Median']
 
 features = []
 for feature in saccade_fixation:
