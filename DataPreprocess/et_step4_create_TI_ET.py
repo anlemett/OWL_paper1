@@ -5,7 +5,7 @@ import os
 import pandas as pd
 import math
 import statistics
-#import sys
+import sys
 #from sklearn import preprocessing
 
 DATA_DIR = os.path.join("..", "..")
@@ -135,14 +135,15 @@ for atco in filenames:
                 continue
             
             ti_saccades_df = ti_df[ti_df['Saccade']!=0]
-            if ti_saccades_df.empty: # no saccade during the whole second
-                saccades_total_duration = 0
-                saccades_number = 0
-                saccades_duration_mean = 0
+            if ti_saccades_df.empty: # no saccade during the whole second, might be due to data loss
+                # set the minimum
+                saccades_total_duration = 1
+                saccades_number = 1
+                saccades_duration_mean = 1
                 saccades_duration_std = 0
-                saccades_duration_median = 0
-                saccades_duration_min = 0
-                saccades_duration_max = 0
+                saccades_duration_median = 1
+                saccades_duration_min = 1
+                saccades_duration_max = 1
 
             else:
                 saccades_total_duration = len(ti_saccades_df.index)
@@ -162,14 +163,9 @@ for atco in filenames:
 
             ti_fixation_df = ti_df[ti_df['Fixation']!=0]
 
-            if ti_fixation_df.empty: # no fixation during the whole second, might be due to data loss
-                fixation_total_duration = 0
-                fixation_number = 0
-                fixation_duration_mean = 0
-                fixation_duration_std = 0
-                fixation_duration_median = 0
-                fixation_duration_min = 0
-                fixation_duration_max = 0
+            if ti_fixation_df.empty: 
+                print("No fixation during the whole second. Check the previous step.")
+                sys.exit(1)
 
             else:
                 fixation_total_duration = len(ti_fixation_df.index)
